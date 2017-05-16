@@ -79,7 +79,7 @@ cvar_t	r_explosiontype		= {"r_explosiontype", "1",true};
 cvar_t	r_explosionlight	= {"r_explosionlight", "1",true};
 cvar_t	r_rocketlight		= {"r_rocketlight", "1",true};
 #ifdef GLQUAKE
-cvar_t	r_explosionlightcolor	= {"r_explosionlightcolor", "0"};
+cvar_t	r_explosionlightcolor = {"r_explosionlightcolor", "0"};
 cvar_t	r_rocketlightcolor	= {"r_rocketlightcolor", "0"};
 #endif
 cvar_t	r_rockettrail		= {"r_rockettrail", "3",true};
@@ -95,7 +95,7 @@ cvar_t	cl_advancedcompletion = {"cl_advancedcompletion", "1"};
 cvar_t	scr_nocenterprint	= {"scr_nocenterprint", "0",false};
 cvar_t	cl_nomessageprint	= {"cl_nomessageprint", "0",false};//R00k: suppress mm1/2 output. Used for making demos.
 cvar_t	chase_transparent	= {"chase_transparent", "1",true};
-cvar_t	cl_basespeedkey		= {"cl_basespeedkey", "1",true};
+cvar_t	cl_basespeedkey		= {"cl_basespeedkey", "200",true};//Median speed point, if forward speed greater than this speed then +speed becomes inverted.
 
 cvar_t	cl_footsteps		= {"cl_footsteps", "0", false};//Dont save this to the config, require the player to force it on so mods like Arcane Dimensions' footsteps take priority.
 

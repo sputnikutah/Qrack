@@ -56,12 +56,14 @@ cvar_t		pq_removecr = {"pq_removecr", "1"};		// JPG 3.20 - remove \r from consol
 cvar_t		con_clear_input_on_toggle = {"con_clear_input_on_toggle","0"};	// R00k, erase console input line when toggling the console
 cvar_t		con_clear_key_state = {"con_clear_key_state","0"};				// R00k, Let off keys held down when pressing ~
 
+cvar_t		con_nomsgdupe = {"con_nomsgdupe","0"};//sschm
+
 #define	NUM_CON_TIMES 16
 float		con_times[NUM_CON_TIMES];	// realtime time the line was generated
 						// for transparent notify lines
 
-int		con_vislines;
-int		con_notifylines;		// scan lines to clear for notify lines
+int			con_vislines;
+int			con_notifylines;		// scan lines to clear for notify lines
 
 qboolean	con_debuglog = false;
 qboolean	con_debugconsole = false;
@@ -465,6 +467,7 @@ void Con_Init (void)
 	Cvar_RegisterVariable (&con_logcenterprint); //johnfitz
 	Cvar_RegisterVariable (&con_clear_input_on_toggle);//R00k
 	Cvar_RegisterVariable (&con_clear_key_state);//R00k
+	Cvar_RegisterVariable (&con_nomsgdupe);//sschm
 	Cvar_RegisterVariable (&pq_confilter);	// JPG 1.05 - make "you got" messages temporary
 	Cvar_RegisterVariable (&pq_timestamp);	// JPG 1.05 - timestamp player binds during a match
 	Cvar_RegisterVariable (&pq_removecr);	// JPG 3.20 - optionally remove '\r'
@@ -507,12 +510,31 @@ If no console is visible, the notify window will pop up.
 ================
 */
 #define DIGIT(x) ((x) >= '0' && (x) <= '9')
+
 void Con_Print (char *txt)
 {
 	int		y, c, l, mask;
 	static int	cr;
 	static int fixline = 0;	
-	
+	static char szOldText[16384];
+
+	//sschm 3/2/2017 3:34PM
+	if (con_nomsgdupe.value)
+	{		
+		if (txt[0])
+		{
+			if (szOldText[0])
+			{
+				if (!_stricmp(szOldText, txt))
+				{
+					return;
+				}
+				RtlZeroMemory(szOldText, _countof(szOldText));
+			}
+			strncpy_s(szOldText, _countof(szOldText), txt, _TRUNCATE);
+		}
+	}	
+
 	// JPG 1.05 - make the "You got" messages temporary
 	if (pq_confilter.value)
 		fixline |= !strcmp(txt, "You got armor\n") || 

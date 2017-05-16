@@ -51,6 +51,8 @@ kbutton_t	in_lookup, in_lookdown, in_moveleft, in_moveright;
 kbutton_t	in_strafe, in_speed, in_use, in_jump, in_attack;
 kbutton_t	in_up, in_down;
 
+extern cvar_t cl_basespeedkey;
+
 int			in_impulse, last_impulse;
 
 // JPG 1.05 - translate +jump to +moveup under water
@@ -301,15 +303,15 @@ Moves the local angle positions
 */
 void CL_AdjustAngles (void)
 {
-	float	speed, up, down;
-	
+	float	speed, up, down, base;		
 	float frametime	= fabs(cl.ctime - cl.oldtime);
 	
-	if ((cl_forwardspeed.value > 200) ^ (in_speed.state & 1))
+	base = (cl_basespeedkey.value ? cl_basespeedkey.value : 200);
+
+	if ((cl_forwardspeed.value > base) ^ (in_speed.state & 1))
 		speed = host_frametime * cl_anglespeedkey.value;
 	else
 		speed = host_frametime;
-
 
 	if (!(in_strafe.state & 1))
 	{
@@ -355,7 +357,6 @@ void CL_AdjustAngles (void)
 		cl.viewangles[ROLL] = -50;
 }
 
-extern cvar_t cl_basespeedkey;
 /*
 ================
 CL_BaseMove
@@ -365,6 +366,8 @@ Send the intended movement message to the server
 */
 void CL_BaseMove (usercmd_t *cmd)
 {	
+	float base;
+	
 	if (cls.signon != SIGNONS)
 		return;
 
@@ -373,7 +376,6 @@ void CL_BaseMove (usercmd_t *cmd)
 	cmd->forwardmove = 0;
 	cmd->sidemove = 0;
 	cmd->upmove = 0;
-
 	
 	if (in_strafe.state & 1)
 	{
@@ -383,55 +385,53 @@ void CL_BaseMove (usercmd_t *cmd)
 
 	cmd->sidemove += cl_sidespeed.value * CL_KeyState (&in_moveright);
 	cmd->sidemove -= cl_sidespeed.value * CL_KeyState (&in_moveleft);
-
 	cmd->upmove += cl_upspeed.value * CL_KeyState (&in_up);
 	cmd->upmove -= cl_upspeed.value * CL_KeyState (&in_down);
 
+	if (!(in_klook.state & 1))
+	{	
+		cmd->forwardmove += cl_forwardspeed.value * CL_KeyState (&in_forward);
+		cmd->forwardmove -= cl_backspeed.value * CL_KeyState (&in_back);
+	}	
+
 // adjust for speed key	
 
-//R00k: i didnt want +/-speed with 'always run on' to eventually STOP the player, but instead toggle the speed from walk to run, or run to walk.
-//todo : sidespeed and upspeed	
-	if (cl_basespeedkey.value && cl_movespeedkey.value) 
+	if ((in_speed.state & 1))//+speed
 	{
-		if ((cl_forwardspeed.value > 200) && (in_speed.state & 1))
+		if (cl_basespeedkey.value)//if always running, +speed becomes braking, affects strafing and vertical movement.
 		{
-			if (!(in_klook.state & 1))
-			{	
-				cmd->forwardmove += 200 * CL_KeyState (&in_forward);
-				cmd->forwardmove -= 200 * CL_KeyState (&in_back);
-			}	
-		}
-		else 
-		{
-			if (!(in_klook.state & 1))
-			{	
-				cmd->forwardmove += cl_forwardspeed.value * CL_KeyState (&in_forward);
-				cmd->forwardmove -= cl_backspeed.value * CL_KeyState (&in_back);
-			}	
+			base = max (200,cl_basespeedkey.value);//median speed point
 
-			if (in_speed.state & 1)
+			if ((cl_forwardspeed.value > base))//if always run is on then -speed
+			{
+				if (!(in_klook.state & 1))
+				{	
+					base = ((cl_forwardspeed.value)/(cl_movespeedkey.value));					
+					cmd->forwardmove -= base * CL_KeyState (&in_forward);
+					cmd->forwardmove += base * CL_KeyState (&in_back);
+				}	
+				base = ((cl_sidespeed.value)/(cl_movespeedkey.value));
+				cmd->sidemove -= base * CL_KeyState (&in_moveright);
+				cmd->sidemove += base * CL_KeyState (&in_moveleft);
+				
+				base = ((cl_upspeed.value)/(cl_movespeedkey.value));
+				cmd->upmove -= base * CL_KeyState (&in_up);
+				cmd->upmove += base * CL_KeyState (&in_down);
+			}
+			else 
 			{
 				cmd->forwardmove *= cl_movespeedkey.value;
 				cmd->sidemove *= cl_movespeedkey.value;
 				cmd->upmove *= cl_movespeedkey.value;
 			}
 		}
-	}
-	else
-	{
-		if (!(in_klook.state & 1))
-		{	
-			cmd->forwardmove += cl_forwardspeed.value * CL_KeyState (&in_forward);
-			cmd->forwardmove -= cl_backspeed.value * CL_KeyState (&in_back);
-		}	
-
-		if (in_speed.state & 1)
-		{
+		else
+		{//Standard behavior (cl_basespeedkey off), +speed for sprint
 			cmd->forwardmove *= cl_movespeedkey.value;
 			cmd->sidemove *= cl_movespeedkey.value;
 			cmd->upmove *= cl_movespeedkey.value;
 		}
-	}//Phew!
+	}
 }
 
 // joe: support for synthetic lag, from ProQuake

@@ -243,6 +243,63 @@ void R_DrawSmokeEffect (vec3_t org, float ofs)
 	}
 }
 
+void R_DrawSteamEffect (vec3_t org, float ofs)
+{
+	int i;
+	int base = abs (lrintf(ofs) % 8);
+
+	// this is just a container to keep things neat for the particle currently being drawn
+	sparticle_t p;
+
+	for (i = base; i < NUM_SMOKE_PARTICLES; i += 8)
+	{
+		// don't add anything with negative alpha
+		// (allow ourselves to take some of the particles with negative alpha to get a better height range,
+		// we'll add 0.25 to the alpha before drawing)
+		if (R_SmokeParticles[i].alpha < -0.25) continue;
+
+		// don't draw if the particle is completely under the lava
+		if (org[2] + R_SmokeParticles[i].org[2] * (8 / 4) + ofs < org[2] - 4) continue;
+
+		p.org[0] = org[0] + R_SmokeParticles[i].org[0] * 8;
+		p.org[1] = org[1] + R_SmokeParticles[i].org[1] * 8;
+		p.org[2] = org[2] + R_SmokeParticles[i].org[2] * (8 / 4) + ofs;
+
+		// add 0.25 to alpha to compensate for the negative alpha of 0.25 we accepted above
+		p.alpha = R_SmokeParticles[i].alpha + 0.25;
+
+		// scale it down to make a "haze" rather than a "smoke" effect
+		p.alpha /= 3;
+
+		// clamp the range
+		if (p.alpha > 0.5) p.alpha = 0.5;
+		if (p.alpha < 0) p.alpha = 0;
+
+		// you'll need to tweak this depending on your engine's colour balance
+		// *= 2 is fine for Qrack, don't multiply for MHQuake
+		p.alpha *= 1.5;
+
+		// these particles will be off-center, so correct that by calcing a new origin
+		// to offset the verts from, which is half the offset away in each direction
+		pOrg[0] = p.org[0] - (pRight[0] + pUp[0]) / 2;
+		pOrg[1] = p.org[1] - (pRight[1] + pUp[1]) / 2;
+		pOrg[2] = p.org[2] - (pRight[2] + pUp[2]) / 2;
+
+		glColor4f (PRGB[0][(int) R_SmokeParticles[i].color],PRGB[1][(int) R_SmokeParticles[i].color],PRGB[2][(int) R_SmokeParticles[i].color],p.alpha);
+
+		glTexCoord2f (0, 0);
+		glVertex3fv (pOrg);
+
+		glTexCoord2f (1, 0);
+		glVertex3f (pOrg[0] + pUp[0], pOrg[1] + pUp[1], pOrg[2] + pUp[2]);
+
+		glTexCoord2f (1, 1);
+		glVertex3f (pOrg[0] + pRight[0] + pUp[0], pOrg[1] + pRight[1] + pUp[1], pOrg[2] + pRight[2] + pUp[2]);
+
+		glTexCoord2f (0, 1);
+		glVertex3f (pOrg[0] + pRight[0], pOrg[1] + pRight[1], pOrg[2] + pRight[2]);
+	}
+}
 
 void R_TorchSmoke (vec3_t org, float ofs)
 {
@@ -328,7 +385,7 @@ void R_SmokeFrame (void)
 		name = surf->texinfo->texture->name;
 
 		// don't check 0 cos some texture loaders may change it!!!
-		if ((!(name[1] == 'l' && name[2] == 'a' && name[3] == 'v' && name[4] == 'a')))//lava only
+		if ((((!(name[1] == 'l' && name[2] == 'a' && name[3] == 'v' && name[4] == 'a')))&&(((!(name[1] == 's' && name[2] == 'l' && name[3] == 'i' && name[4] == 'm'))))))
 			continue;
 
 		// ok, we have a lava surf which is visible
@@ -340,7 +397,15 @@ void R_SmokeFrame (void)
 			if (VectorLength(distance) > r_farclip.value)
 			continue;
 
-			R_DrawSmokeEffect (p->midpoint, p->fxofs);
+			if (name[1] == 'l' && name[2] == 'a' && name[3] == 'v' && name[4] == 'a')
+			{
+				R_DrawSmokeEffect (p->midpoint, p->fxofs);
+			}
+			else
+			{
+				if (name[1] == 's' && name[2] == 'l' && name[3] == 'i' && name[4] == 'm')
+					R_DrawSteamEffect (p->midpoint, p->fxofs);
+			}
 		}
 	}
 
