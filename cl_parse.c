@@ -225,7 +225,7 @@ void CL_KeepaliveMessage (void)
 	Con_Printf ("--> client to server keepalive\n");
 
 	MSG_WriteByte (&cls.message, clc_nop);
-	NET_SendUnreliableMessage (cls.netcon, &cls.message);//R00k changed to NET_SendUnreliableMessage from NET_SendMessage
+	NET_SendMessage (cls.netcon, &cls.message);//R00k changed to NET_SendUnreliableMessage from NET_SendMessage
 
 	SZ_Clear (&cls.message);
 }

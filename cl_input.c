@@ -293,6 +293,7 @@ cvar_t	cl_anglespeedkey	= {"cl_anglespeedkey",	"1.5"};
 // joe: synthetic lag, from ProQuake
 cvar_t	pq_lag				= {"pq_lag", "0"};
 cvar_t	pq_fullpitch		= {"pq_fullpitch", "0",true};	// JPG 2.01 - get rid of the "unknown command" messages
+cvar_t	cl_fullpitch		= {"cl_fullpitch", "0",true};	// JPG 2.01 - get rid of the "unknown command" messages
 
 /*
 ================
@@ -606,7 +607,7 @@ void CL_SendMove (usercmd_t *cmd)
 
 	if (!sv.active)
 	{
-		Con_DPrintf (1,"cl_netfps: %f (%1.2f sec) saved %4.2f bytes\n", cl_netfps.value, packettime, kb);
+		Con_DPrintf (99,"cl_netfps: %f (%1.2f sec) saved %4.2f bytes\n", cl_netfps.value, packettime, kb);
 	}
 	kb = 0;
 }

@@ -1048,7 +1048,10 @@ void Cmd_ForwardToServer (void)
 		Con_Printf ("Can't \"%s\", not connected\n", Cmd_Argv(0));
 		return;
 	}
-	
+
+	if (!cls.netcon)
+		return;
+
 	if (cls.demoplayback)
 		return;		// not really connected
 
