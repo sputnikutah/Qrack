@@ -597,9 +597,6 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation)
 	if (!sfx)
 		return;
 
-    if (ambient_level.value < 1)
-        return;
-
 	if (total_channels == MAX_CHANNELS)
 	{
 //joe		Con_Printf ("total_channels == MAX_CHANNELS\n");
@@ -647,11 +644,6 @@ void S_UpdateAmbientSounds (void)
 
 	if (!ambient_level.value)//R00k: if levels are off dont 'Mod_PointInLeaf' every frame!
 	{
-		if (channels[ambient_channel].sfx != NULL)//R00k, if there's an sfx in use then clear all...
-		{
-			for (ambient_channel = 0 ; ambient_channel< NUM_AMBIENTS ; ambient_channel++)
-				channels[ambient_channel].sfx = NULL;
-		}
 		return;
 	}
 

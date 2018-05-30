@@ -949,7 +949,7 @@ void SCR_DrawAutoIds (void)
 
 	float frametime	= fabs(cl.mtime[0] - cl.mtime[1]);
 
-	if (frametime < (1/cl_maxfps.value)/2)//R00k, might help from over drawing
+	if (frametime < (1/cl_maxfps.value)/2)//R00k, might help from over drawing 
 		return;
 
 	for (i = 0; i < autoid_count; i++)
@@ -958,7 +958,7 @@ void SCR_DrawAutoIds (void)
 		y =  (glheight - autoids[i].y) * vid.height / glheight;
 
 //		Draw_String_Scaled (x - strlen(va("%i",autoids[i].player->frags)) * 4 * (autoids[i].scale * 1), y - 8 * (autoids[i].scale * 1), va("%i",autoids[i].player->frags), (autoids[i].scale * 1));
-		Draw_String_Scaled (x - strlen(autoids[i].player->name) * 4 * (autoids[i].scale * 1.2), y + 0  * (autoids[i].scale * 1.2), autoids[i].player->name, (autoids[i].scale * 2));
+		Draw_String_Scaled (x - strlen(autoids[i].player->name) * 4 * (autoids[i].scale * 0.6), y + 0  * (autoids[i].scale * 0.6), autoids[i].player->name, (autoids[i].scale * 1));
 //		Draw_String_Scaled (x - strlen(va("%i",autoids[i].player->ping)) * 4 * (autoids[i].scale * 0.8), y + 24  * (autoids[i].scale * 0.8), va("%i",autoids[i].player->ping), (autoids[i].scale * 0.8));//pING		
 	}
 }
@@ -976,6 +976,7 @@ void SCR_SetupAutoID (void)
 		return;
 
 	autoid_count = 0;
+	memset(&autoids, 0, sizeof(autoids));//needed?
 
     glGetFloatv (GL_MODELVIEW_MATRIX, model);
     glGetFloatv (GL_PROJECTION_MATRIX, project);
@@ -1002,13 +1003,14 @@ void SCR_SetupAutoID (void)
 
 		VectorCopy(state->origin, origin);
 
-		origin[2] += 12;//middle of the player model
+		origin[2] += 45;// cvar this?
 
         if (qglProject (origin[0], origin[1], origin[2], model, project, view, &id->x, &id->y, &id->scale))
 		{
             autoid_count++;
 		}
     }
+	Q_free(state);
 }
 
 void SCR_DrawEdictTags (void)
@@ -1392,7 +1394,9 @@ void SCR_UpdateScreen (void)
 		SCR_DrawSpeed ();
 		Sbar_Draw ();
 		SCR_DrawConsole ();	
-		M_Draw ();
+		
+//		if (key_dest == key_menu)//Testing; shadowplay is flickering the menu !! :(
+			M_Draw ();
 
 		if ((developer.value && developer_tool_show_edict_tags.value))
 		{

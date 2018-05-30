@@ -115,7 +115,7 @@ net_landriver_t	net_landrivers[MAX_NET_DRIVERS] =
 	WINS_GetSocketPort,
 	WINS_SetSocketPort
 	},
-	{
+/*	{
 	"Winsock IPX",
 	false,
 	0,
@@ -138,7 +138,8 @@ net_landriver_t	net_landrivers[MAX_NET_DRIVERS] =
 	WIPX_GetSocketPort,
 	WIPX_SetSocketPort
 	}
+*/
 };
 
-int net_numlandrivers = 2;
+int net_numlandrivers = 1;//was 2 (disabled ipx)
 //int net_numlandrivers = 3;

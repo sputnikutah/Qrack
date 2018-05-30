@@ -800,7 +800,7 @@ returns false if error
 */
 qboolean ED_ParseEpair (void *base, ddef_t *key, char *s)
 {
-	int		i;
+	int			i;
 	char		string[128];
 	ddef_t		*def;
 	char		*v, *w;
@@ -825,7 +825,7 @@ qboolean ED_ParseEpair (void *base, ddef_t *key, char *s)
 		w = string;
 		for (i=0 ; i<3 ; i++)
 		{
-			while (*v && *v != ' ')
+			while (*v && !(ISWHITESPACE(*v)))
 				v++;
 			*v = 0;
 			((float *)d)[i] = atof (w);

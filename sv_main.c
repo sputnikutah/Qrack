@@ -95,6 +95,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_aim);
 	Cvar_RegisterVariable (&sv_nostep);
 	Cvar_RegisterVariable (&pq_fullpitch);	// JPG 2.01
+	Cvar_RegisterVariable (&cl_fullpitch);	// JPG 2.01
 	Cvar_RegisterVariable (&sv_progs);
 	Cvar_RegisterVariable (&sv_mapname);
 	Cvar_RegisterVariable (&sv_sound_land);//DarkPlaces
@@ -1177,6 +1178,10 @@ void SV_SendClientMessages (void)
 				continue;	// don't send out non-signon messages
 			}
 		}
+
+		// JPG 3.40 - NAT fix
+		if (host_client->netconnection->net_wait)
+			continue;
 
 
 		// check for an overflowed message. Should only happen on a very

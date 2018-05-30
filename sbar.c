@@ -1248,7 +1248,7 @@ void SCR_PrintStats (void)
 		}
 		else
 		{
-			if ((cl.teamgame) && (pq_teamscores.value))
+			if (cl.teamgame)
 			{
 				Sbar_SortTeamFrags();
 				l = scoreboardlines <= 4 ? scoreboardlines : 4;

@@ -21,15 +21,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "winquake.h"
-#include "fmod.h"
-#include "fmod_errors.h"
+//#include "fmod.h"
+//#include "fmod_errors.h"
 #ifndef _WIN32
 #include <dlfcn.h>
 #endif
 
 int	NehGameType = 0;
-static qboolean modplaying = false;
-static qboolean sampleplaying = false;
+//static qboolean modplaying = false;
+//static qboolean sampleplaying = false;
 
 cvar_t	gl_notrans	= {"gl_notrans", "0"};
 
@@ -63,7 +63,7 @@ cvar_t  cutscene = {"cutscene", "1"};
 
 int	num_sfxorig;
 void Neh_CheckMode (void);
-
+/*
 FMUSIC_MODULE	*mod = NULL;
 
 static signed char (F_API *qFSOUND_Init)(int, int, unsigned int);
@@ -209,7 +209,7 @@ void FMOD_Close (void)
 	if (fmod_loaded)
 		qFSOUND_Close ();
 }
-
+*/
 void Neh_DoBindings (void)
 {
 	if (NehGameType == TYPE_DEMO)
@@ -273,10 +273,11 @@ void Neh_Init (void)
 
 	if (COM_CheckParm("-matrox"))
 		nospr32.value = 1;
-
+/*
 	FMOD_LoadLibrary ();
 	if (fmod_loaded)
 		FMOD_Init ();
+*/
 }
 
 void Neh_SetupFrame (void)

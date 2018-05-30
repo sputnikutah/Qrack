@@ -358,6 +358,17 @@ void CL_AdjustAngles (void)
 		cl.viewangles[ROLL] = -50;
 }
 
+//MH. RMQe.
+void CL_RebalanceMove (usercmd_t *basecmd, usercmd_t *newcmd)//, double frametime)
+{
+	double frametime = fabs (cl.ctime - cl.oldtime);
+	// rebalance movement to 72 FPS (fixme - make this user-configurable)
+	double moveadjust = frametime * 72.0;
+
+	basecmd->forwardmove += newcmd->forwardmove * moveadjust;
+	basecmd->sidemove += newcmd->sidemove * moveadjust;
+	basecmd->upmove += newcmd->upmove * moveadjust;
+}
 /*
 ================
 CL_BaseMove
@@ -368,7 +379,12 @@ Send the intended movement message to the server
 void CL_BaseMove (usercmd_t *cmd)
 {	
 	float base;
-	
+	usercmd_t basemove;
+
+	basemove.forwardmove = 0;
+	basemove.sidemove = 0;
+	basemove.upmove = 0;
+
 	if (cls.signon != SIGNONS)
 		return;
 
@@ -433,6 +449,9 @@ void CL_BaseMove (usercmd_t *cmd)
 			cmd->upmove *= cl_movespeedkey.value;
 		}
 	}
+	
+	if (sv.active)	
+		CL_RebalanceMove (cmd, &basemove);//, frametime);
 }
 
 // joe: support for synthetic lag, from ProQuake

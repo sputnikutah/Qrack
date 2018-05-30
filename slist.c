@@ -25,7 +25,7 @@ server_entry_t	slist[MAX_SERVER_LIST];
 
 void SList_Init (void)
 {
-	memset (&slist, 0, sizeof(slist));	
+	memset (&slist, 0, sizeof(slist));
 }
 
 void SList_Save (FILE *f)
@@ -47,38 +47,25 @@ void SList_Shutdown (void)
 
 	if (!(f = fopen (va("%s/qrack/servers.txt", com_basedir), "wt")))
 	{
-		Con_DPrintf (1,"Couldn't open servers.txt\n");
+		Con_Printf ("Couldn't create servers.txt\n");
 		return;
 	}
 	SList_Save (f);
 	fclose (f);
 }
-
-void SList_Set (int i, char *addr, char *desc, char *players, char *map, char *mod)
+			
+void SList_Set (int i, char *addr, char *desc)
 {
 	if (i >= MAX_SERVER_LIST || i < 0)
 		Sys_Error ("SList_Set: Bad index %d", i);
 
-	if (slist[i].players)
-		Z_Free (slist[i].players);
-
 	if (slist[i].server)
 		Z_Free (slist[i].server);
-
 	if (slist[i].description)
 		Z_Free (slist[i].description);
 
-	if (slist[i].map)
-		Z_Free (slist[i].map);
-
-	if (slist[i].mod)
-		Z_Free (slist[i].mod);
-
-	slist[i].server		 = CopyString (addr);
-	slist[i].players	 = CopyString (players);
-	slist[i].description = CopyString (desc);
-	slist[i].map		 = CopyString (map);
-	slist[i].mod		 = CopyString (mod);
+	slist[i].server = CopyString (addr);
+	slist[i].description = CopyString (desc);	
 }
 
 void SList_Reset_NoFree (int i)
@@ -86,12 +73,7 @@ void SList_Reset_NoFree (int i)
 	if (i >= MAX_SERVER_LIST || i < 0)
 		Sys_Error ("SList_Reset_NoFree: Bad index %d", i);
 
-	slist[i].server		 = 
-	slist[i].players	 = 
-	slist[i].description = 
-	slist[i].map		 = 
-	slist[i].mod		 = NULL;
-
+	slist[i].description = slist[i].server = NULL;
 }
 
 void SList_Reset (int i)
@@ -109,24 +91,6 @@ void SList_Reset (int i)
 	{
 		Z_Free (slist[i].description);
 		slist[i].description = NULL;
-	}
-	
-	if (slist[i].players)
-	{		
-		Z_Free (slist[i].players);
-		slist[i].players = NULL;
-	}
-
-	if (slist[i].map)
-	{
-		Z_Free (slist[i].map);
-		slist[i].map = NULL;
-	}
-
-	if (slist[i].mod)
-	{
-		Z_Free (slist[i].mod);
-		slist[i].mod = NULL;
 	}
 }
 
@@ -154,18 +118,19 @@ int SList_Length (void)
 	return count;
 }
 
-void SList_Load (void)
+int SList_Load (void)
 {
-	int	c, len, argc, count, i;
-	char	line[128], *desc, *addr, *plyrs, *country, *temp, *map, *mod;
+	int	c, len, argc, count;
+	char	line[128], *desc, *addr;
 	FILE	*f;
-	extern cvar_t slist_filter_noplayers;
-	
-	if (!(f = fopen(va("%s/qrack/servers.txt",com_basedir), "rt")))		
-		return;
 
-	i = count = len = 0;
+	if (!(f = fopen(va("%s/qrack/servers.txt",com_basedir), "rt")))	//if we cant find the file just create it.
+	{
+		Con_Printf ("Couldn't open servers.txt\n");
+		return 0;
+	}
 
+	count = len = 0;
 	while ((c = getc(f)))
 	{
 		if (c == '\n' || c == '\r' || c == EOF)
@@ -178,46 +143,12 @@ void SList_Load (void)
 			Cmd_TokenizeString (line);
 
 			if ((argc = Cmd_Argc()) >= 1)
-			{				
-				for (i = 0; i <= Cmd_Argc(); i++)//find the token for players
-				{
-					if (strstr(Cmd_Argv(i),"/"))
-					{
-						plyrs = Cmd_Argv(i);
-						map = Cmd_Argv(i + 1);
-						mod = Cmd_Argv(i + 2);
-						break;
-					}
-				}
-
-				if (slist_filter_noplayers.value)//Skip entries with no players
-				{
-					if (plyrs)
-						if(strstr(plyrs,"00/"))
-							continue;
-				}
-								
-				{
-					if (plyrs)
-						if(strstr(plyrs,"/00")) //dead server
-							continue;
-				}
-
-				addr = Cmd_Argv(0);//Fill in the actual ip/dns
-				country = Cmd_Argv(1);//Grab the country code even if we are not printing it
-				temp = (argc >= 2) ? Cmd_Args() : "Unknown";//copy the rest of the line
-				
-				for (i = 0;i < strlen(country);i++)//move our position forward past the country 
-					temp++;				
-				
-				desc = temp;
-
-				Q_strncpyz (desc, temp, 19);//servers.quakeone.com only copies 19 characters over for the hostname :(
-
-				SList_Set (count, addr, temp, plyrs, map, mod);//Write out the line to the file.
-
+			{
+				addr = Cmd_Argv(0);
+				desc = (argc >= 2) ? Cmd_Args() : "Unknown";
+				SList_Set (count, addr, desc);
 				if (++count == MAX_SERVER_LIST)
-					break;				
+					break;
 			}
 			if (c == EOF)
 				break;	//just in case an EOF follows a '\r'
@@ -228,6 +159,8 @@ void SList_Load (void)
 				line[len++] = c;
 		}
 	}
+
 	fclose (f);
+	return 1;
 }
 

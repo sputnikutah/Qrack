@@ -240,7 +240,8 @@ int Datagram_GetMessage (qsocket_t *sock)
 			return -1;
 		}
 
-		if (sfunc.AddrCompare(&readaddr, &sock->addr) != 0)
+		// JPG 3.40 - added !sock->net_wait (NAT fix)
+		if (!sock->net_wait && sfunc.AddrCompare(&readaddr, &sock->addr) != 0)
 		{
 			continue;
 		}
@@ -267,6 +268,14 @@ int Datagram_GetMessage (qsocket_t *sock)
 
 		sequence = BigLong (packetBuffer.sequence);
 		packetsReceived++;
+
+		// JPG 3.40 - NAT fix
+		if (sock->net_wait)
+		{
+			sock->addr = readaddr;
+			strcpy(sock->address, sfunc.AddrToString(&readaddr));
+			sock->net_wait = false;
+		}
 
 		if (flags & NETFLAG_UNRELIABLE)
 		{
@@ -832,7 +841,7 @@ static void Rcon_f (void)
 
 	if (Cmd_Argc() < 2)
 	{
-		Con_Printf ("Usage: rcon <host>\n");
+		Con_Printf ("Usage: rcon <command>\n");
 		return;
 	}
 
@@ -857,7 +866,7 @@ static void Rcon_f (void)
 		}
 	}
 
-	//Strip_Port (host);//R00k disabled this so we can RCON to a specific port. ie "rcon my.quakeserver.com:26666"
+	//Strip_Port (host);//R00k disabled this so we can RCON to a specific port. ie "rcon_server my.quakeserver.com:26666"
 
 	if (host && hostCacheCount)
 	{
@@ -1147,28 +1156,8 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 	if (control == -1)
 		return NULL;
 
-	if ((control & (~NETFLAG_LENGTH_MASK)) != NETFLAG_CTL)
-	{
-		/* Yugo2Heck: ProQuake 3.4 (and up) clients close their request socket
-		** and make a new socket for the session.  This means we
-		** connected back to the wrong socket when accepting the
-		** connection.  So we look for a "bogus" request packet 
-		** from that client on a different port, and re-connect 
-		** back to that port instead.
-		*/
-		for (s = net_activeSockets; s; s = s->next)
-		{
-			if (s->driver != net_driverlevel)
-				continue;
-
-			ret = dfunc.AddrCompare(&clientaddr, &s->addr);
-			if (ret == 1)
-			{	//same client, different port: reconnect back
-				dfunc.Connect(s->socket, &clientaddr);								
-				return NULL;
-			}
-		}
-	}
+	if ((control & (~NETFLAG_LENGTH_MASK)) !=  NETFLAG_CTL)
+		return NULL;
 
 	if ((control & NETFLAG_LENGTH_MASK) != len)
 		return NULL;
@@ -1345,6 +1334,7 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 				MSG_WriteLong (&net_message, s->client_port);
 				MSG_WriteByte (&net_message, MOD_PROQUAKE);
 				MSG_WriteByte (&net_message, 10 * MOD_PROQUAKE_VERSION);
+
 				*((int *)net_message.data) = BigLong (NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 				dfunc.Write (acceptsock, net_message.data, net_message.cursize, &clientaddr);
 				SZ_Clear (&net_message);
@@ -1379,30 +1369,13 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 	}
 
 	// allocate a QSocket
-	sock = NET_NewQSocket ();
-	if (sock == NULL)
-	{
-		// no room; try to let him know
-		SZ_Clear(&net_message);
-		// save space for the header, filled in later
-		MSG_WriteLong(&net_message, 0);
-		MSG_WriteByte(&net_message, CCREP_REJECT);
-		MSG_WriteString(&net_message, "Server is full.\n");
-		*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
-		dfunc.Write (acceptsock, net_message.data, net_message.cursize, &clientaddr);
-		SZ_Clear(&net_message);
-		return NULL;
-	}
-
-/*
-	// allocate a network socket
-	{
-		struct qsockaddr oldaddr;
-		dfunc.GetSocketAddr(acceptsock, &oldaddr);
-		newsock = dfunc.OpenSocket(dfunc.GetSocketPort(&oldaddr));
-	}
-*/
-	newsock = dfunc.OpenSocket(sock->client_pool);//R00k:testing Skutarth's port forwarding pool code.
+	if (!(sock = NET_NewQSocket()))
+		return Datagram_Reject ("Server is full.\n", acceptsock, &clientaddr);
+	
+	if (COM_CheckParm ("-startport"))//Skutarth
+		newsock = dfunc.OpenSocket(sock->client_pool);//R00k:testing Skutarth's port forwarding pool code.
+	else	
+		newsock = dfunc.OpenSocket(0);
 
 	if (newsock == -1)
 	{
@@ -1421,7 +1394,10 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 
 	sock->mod = mod;
 	sock->mod_version = mod_version;
-
+	
+	if (mod == MOD_PROQUAKE && mod_version >= 34)
+		sock->net_wait = true;		// JPG 3.40 - NAT fix
+	
 	// everything is allocated, just fill in the details	
 	sock->socket = newsock;
 	sock->landriver = net_landriverlevel;
@@ -1437,14 +1413,12 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 	sock->client_port = dfunc.GetSocketPort(&newaddr);
 	MSG_WriteLong (&net_message, sock->client_port);
 
-	//R00k: fake ProQuake compatibility...
-	//if (sv_proquake.value)
+//	if (sv_proquake.value)
 	{
 		MSG_WriteByte (&net_message, MOD_PROQUAKE);
 		MSG_WriteByte (&net_message, 10 * MOD_PROQUAKE_VERSION);
 		MSG_WriteByte(&net_message, 0);
 	}
-	//--pq
 	
 	*((int *)net_message.data) = BigLong (NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 	dfunc.Write (acceptsock, net_message.data, net_message.cursize, &clientaddr);
@@ -1581,12 +1555,13 @@ static qsocket_t *_Datagram_Connect (char *host)
 	struct		qsockaddr sendaddr;
 	struct		qsockaddr readaddr;
 	qsocket_t	*sock;
-	int			newsock, ret, len, reps;
+	int			newsock, ret, len, reps, clientsock;// JPG 3.40 - added clientsock
 	double		start_time;
 	int			control;
 	char		*reason;
 	extern int	DEFAULTnet_clientport;
 	extern	cvar_t	cl_proquake;
+
 
 	// see if we can resolve the host name
 	if (dfunc.GetAddrFromName(host, &sendaddr) == -1)
@@ -1604,6 +1579,9 @@ static qsocket_t *_Datagram_Connect (char *host)
 
 	if (!(sock = NET_NewQSocket()))
 		goto ErrorReturn2;
+
+
+
 
 	sock->socket = newsock;
 	sock->landriver = net_landriverlevel;
@@ -1625,13 +1603,11 @@ static qsocket_t *_Datagram_Connect (char *host)
 		MSG_WriteByte (&net_message, CCREQ_CONNECT);
 		MSG_WriteString (&net_message, "QUAKE");
 		MSG_WriteByte (&net_message, NET_PROTOCOL_VERSION);	//R00k: This gets confusing, but ALL netQuake1 servers are NET_PROTOCOL_VERSION 3
-		
 		if (cl_proquake.value)
 		{
 			MSG_WriteByte (&net_message, MOD_PROQUAKE);			//R00k: Imitate a ProQuake client so a PROQUAKE server will handle our angles properly!
 			MSG_WriteByte (&net_message, MOD_PROQUAKE_VERSION * 10);
 		}
-
 		MSG_WriteByte(&net_message, 0);						// JPG 3.00 - added this (flags)
 		MSG_WriteLong(&net_message, pq_password.value);		// JPG 3.00 - password protected servers
 
@@ -1758,7 +1734,7 @@ static qsocket_t *_Datagram_Connect (char *host)
 	sock->lastMessageTime = SetNetTime ();
 
 	// joe, from ProQuake: make NAT work by opening a new socket
-	/*
+	if (sock->mod == MOD_PROQUAKE && sock->mod_version >= 34)
 	{
 		clientsock = dfunc.OpenSocket(0);
 		if (clientsock == -1)
@@ -1767,7 +1743,7 @@ static qsocket_t *_Datagram_Connect (char *host)
 		newsock = clientsock;
 		sock->socket = newsock;
 	}
-	*/
+
 	// switch the connection to the specified address
 	if (dfunc.Connect(newsock, &sock->addr) == -1)
 	{
@@ -1803,7 +1779,7 @@ qsocket_t *Datagram_Connect (char *host)
 	Strip_Port (host);
 	for (net_landriverlevel = 0 ; net_landriverlevel < net_numlandrivers ; net_landriverlevel++)
 		if (net_landrivers[net_landriverlevel].initialized)
-			if ((ret = _Datagram_Connect(host)))
+			if ((ret = _Datagram_Connect(host)) != NULL)
 				break;
 
 	return ret;

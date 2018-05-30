@@ -434,9 +434,6 @@ int Mod_LoadBrushModelTexture (texture_t *tx, int flags)
 	if (isDedicated)
 		return 0;
 
-	//if (loadmodel->bspversion == HL_BSPVERSION)
-	//	return 0;
-
 	if (loadmodel->isworldmodel)
 	{
 		if (!gl_externaltextures_world.value)
@@ -569,7 +566,7 @@ void Mod_LoadTextures (lump_t *l)
 			}
 		}
 
-		if ((loadmodel->isworldmodel && ISSKYTEX(tx->name)) && (loadmodel->bspversion != HL_BSPVERSION))
+		if (loadmodel->isworldmodel && ISSKYTEX(tx->name))
 		{				
 			R_InitSky (mt);			
 			continue;
@@ -582,21 +579,6 @@ void Mod_LoadTextures (lump_t *l)
 
 		if ((loadmodel->isworldmodel) && (!ISTURBTEX(tx->name)))
 			texture_mode |= TEX_WORLD;
-
-		//HalfLife map support...
-		if (loadmodel->bspversion == HL_BSPVERSION) 
-		{
-			if ((data = WAD3_LoadTexture(mt))) 
-			{
-				com_netpath[0] = 0;	
-
-				texture_mode |= ISALPHATEX(tx->name) ? TEX_ALPHA : 0;
-
-				tx->gl_texturenum = GL_LoadTexturePixels (data, tx->name, tx->width, tx->height, texture_mode);
-				
-				continue;
-			}
-		}
 
 		if (mt->offsets[0])
 		{
@@ -810,13 +792,6 @@ void Mod_LoadLighting (lump_t *l)
 	if (!l->filelen)
 		return;
 
-	if (loadmodel->bspversion == HL_BSPVERSION) 
-	{
-		loadmodel->lightdata = (byte *) MallocZ (l->filelen * 3);
-		memcpy (loadmodel->lightdata, mod_base + l->fileofs, l->filelen);//*3??
-		return;
-	}
-
 	// check for a .lit file
 	data = LoadColoredLighting (loadmodel->name, &litfilename);
 
@@ -903,77 +878,6 @@ void Mod_LoadVisibility (lump_t *l)
 	memcpy (loadmodel->visdata, mod_base + l->fileofs, l->filelen);
 }
 
-
-static void Mod_ParseWadsFromEntityLump(char *data) 
-{	
-	char *s, key[1024], value[1024];	
-	int i, j, k;
-
-	if (!data || !(data = COM_Parse(data)))
-		return;
-
-	if (com_token[0] != '{')
-		return; // error
-
-	while (1) 
-	{
-		if (!(data = COM_Parse(data)))
-			return; // error
-
-		if (com_token[0] == '}')
-			break; // end of worldspawn
-
-		Q_strncpyz(key, (com_token[0] == '_') ? com_token + 1 : com_token, sizeof(key));
-
-		for (s = key + strlen(key) - 1; s >= key && *s == ' '; s--)		// remove trailing spaces
-			*s = 0;
-
-		if (!(data = COM_Parse(data)))
-			return; // error
-
-		Q_strncpyz(value, com_token, sizeof(value));
-
-		if (!isDedicated)
-		{
-			if (!strcmp("sky", key) || !strcmp("skyname", key))
-				Cvar_Set("r_skybox", value);
-		}
-
-		if (!strcmp("wad", key)) 
-		{
-			j = 0;
-			for (i = 0; i < strlen(value); i++) 
-			{
-				if (value[i] != ';' && value[i] != '\\' && value[i] != '/' && value[i] != ':')
-					break;
-			}
-			if (!value[i])
-				continue;
-
-			for ( ; i < sizeof(value); i++) 
-			{			
-				if (value[i] == '\\' || value[i] == '/' || value[i] == ':') 
-				{
-					j = i + 1;
-				}
-				else if (value[i] == ';' || value[i] == 0) 
-				{
-					k = value[i];
-					value[i] = 0;
-					if (!isDedicated)
-					{
-						if (value[j])
-							WAD3_LoadTextureWadFile (value + j);
-					}
-					j = i + 1;
-					if (!k)
-						break;
-				}
-			}
-		}
-	}
-}
-
 /*
 =================
 Mod_LoadEntities
@@ -989,9 +893,6 @@ void Mod_LoadEntities (lump_t *l)
 	//loadmodel->entities = Hunk_AllocName (l->filelen,  va("%s_@entities", loadmodel->name));
 	loadmodel->entities = (char *) MallocZ (l->filelen);
 	memcpy (loadmodel->entities, mod_base + l->fileofs, l->filelen);
-
-	if (loadmodel->bspversion == HL_BSPVERSION && (!sv.active))
-		Mod_ParseWadsFromEntityLump(loadmodel->entities);
 }
 
 
@@ -1362,7 +1263,7 @@ void Mod_LoadFaces (lump_t *l, qboolean bsp2)
 		if (lofs == -1)
 			out->samples = NULL;
 		else
-			out->samples = loadmodel->lightdata + (loadmodel->bspversion == HL_BSPVERSION ? lofs : lofs * 3);
+			out->samples = loadmodel->lightdata + lofs * 3;
 
 	// set the drawing flags flag
 		if (ISSKYTEX(out->texinfo->texture->name))	// sky
@@ -1826,70 +1727,29 @@ void Mod_LoadClipnodes (lump_t *l, qboolean bsp2)
 	loadmodel->clipnodes = out;
 	loadmodel->numclipnodes = count;
 
-	if (loadmodel->bspversion == HL_BSPVERSION) 
-	{
-		hull = &loadmodel->hulls[1];
-		hull->clipnodes = out;
-		hull->firstclipnode = 0;
-		hull->lastclipnode = count-1;
-		hull->planes = loadmodel->planes;
-		hull->clip_mins[0] = -16;
-		hull->clip_mins[1] = -16;
-		hull->clip_mins[2] = -36;
-		hull->clip_maxs[0] = 16;
-		hull->clip_maxs[1] = 16;
-		hull->clip_maxs[2] = 36;
+	hull = &loadmodel->hulls[1];
+	hull->clipnodes = out;
+	hull->firstclipnode = 0;
+	hull->lastclipnode = count-1;
+	hull->planes = loadmodel->planes;
+	hull->clip_mins[0] = -16;
+	hull->clip_mins[1] = -16;
+	hull->clip_mins[2] = -24;
+	hull->clip_maxs[0] = 16;
+	hull->clip_maxs[1] = 16;
+	hull->clip_maxs[2] = 32;
 
-		hull = &loadmodel->hulls[2];
-		hull->clipnodes = out;
-		hull->firstclipnode = 0;
-		hull->lastclipnode = count-1;
-		hull->planes = loadmodel->planes;
-		hull->clip_mins[0] = -32;
-		hull->clip_mins[1] = -32;
-		hull->clip_mins[2] = -32;
-		hull->clip_maxs[0] = 32;
-		hull->clip_maxs[1] = 32;
-		hull->clip_maxs[2] = 32;
-
-		hull = &loadmodel->hulls[3];
-		hull->clipnodes = out;
-		hull->firstclipnode = 0;
-		hull->lastclipnode = count-1;
-		hull->planes = loadmodel->planes;
-		hull->clip_mins[0] = -16;
-		hull->clip_mins[1] = -16;
-		hull->clip_mins[2] = -18;
-		hull->clip_maxs[0] = 16;
-		hull->clip_maxs[1] = 16;
-		hull->clip_maxs[2] = 18;
-	} 
-	else 
-	{
-		hull = &loadmodel->hulls[1];
-		hull->clipnodes = out;
-		hull->firstclipnode = 0;
-		hull->lastclipnode = count-1;
-		hull->planes = loadmodel->planes;
-		hull->clip_mins[0] = -16;
-		hull->clip_mins[1] = -16;
-		hull->clip_mins[2] = -24;
-		hull->clip_maxs[0] = 16;
-		hull->clip_maxs[1] = 16;
-		hull->clip_maxs[2] = 32;
-
-		hull = &loadmodel->hulls[2];
-		hull->clipnodes = out;
-		hull->firstclipnode = 0;
-		hull->lastclipnode = count-1;
-		hull->planes = loadmodel->planes;
-		hull->clip_mins[0] = -32;
-		hull->clip_mins[1] = -32;
-		hull->clip_mins[2] = -24;
-		hull->clip_maxs[0] = 32;
-		hull->clip_maxs[1] = 32;
-		hull->clip_maxs[2] = 64;
-	}
+	hull = &loadmodel->hulls[2];
+	hull->clipnodes = out;
+	hull->firstclipnode = 0;
+	hull->lastclipnode = count-1;
+	hull->planes = loadmodel->planes;
+	hull->clip_mins[0] = -32;
+	hull->clip_mins[1] = -32;
+	hull->clip_mins[2] = -24;
+	hull->clip_maxs[0] = 32;
+	hull->clip_maxs[1] = 32;
+	hull->clip_maxs[2] = 64;
 
 	if (bsp2)
 	{

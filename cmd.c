@@ -2197,7 +2197,10 @@ void Cmd_Servers_f (void)
 	success = Web_Get( url, NULL, va("%s/qrack/servers.txt", com_basedir), false, 2, 2, NULL );
 
 	if( !success )
+	{
+		Con_Printf ("WARNING: No response from 'servers.quakeone.com'\n");
 		return;
+	}
 
 	Q_strncpyz (buf, va("%s/qrack/servers.txt", com_basedir), sizeof(buf));
 
@@ -2218,7 +2221,7 @@ void Cmd_Servers_f (void)
 		}
 		else
 		{
-			if (strstr(buf,"00/"))
+			if (strstr(buf,"0/"))
 			{
 				memset (buf, 0, sizeof(buf));
 				continue;

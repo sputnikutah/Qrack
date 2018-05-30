@@ -376,7 +376,7 @@ void R_DrawSkyChain (void)
 		glEnable(GL_FOG);
 	}
 
-	if ((r_fastsky.value) || (cl.worldmodel->bspversion == HL_BSPVERSION) || (gl_textureless.value))
+	if ((r_fastsky.value) || (gl_textureless.value))
 	{
 		GL_Bind (alphaskytexture);
 		for (fa = skychain ; fa ; fa = fa->texturechain)

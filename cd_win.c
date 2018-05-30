@@ -60,7 +60,7 @@ static void CDAudio_CloseDoor (void)
 
 static int CDAudio_GetAudioDiskInfo (void)
 {
-	DWORD			dwReturn;
+	DWORD				dwReturn;
 	MCI_STATUS_PARMS	mciStatusParms;
 
 	cdValid = false;
@@ -97,16 +97,15 @@ static int CDAudio_GetAudioDiskInfo (void)
 	return 0;
 }
 
-
 void CDAudio_Play (byte track, qboolean looping)
 {
-	DWORD			dwReturn;
+	DWORD				dwReturn;
 	MCI_PLAY_PARMS		mciPlayParms;
 	MCI_STATUS_PARMS	mciStatusParms;
 
 	if (!enabled)
 		return;
-	
+
 	if (!cdValid)
 	{
 		CDAudio_GetAudioDiskInfo ();
@@ -394,6 +393,14 @@ LONG CDAudio_MessageHandler (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 void CDAudio_Update (void)
 {
+	extern qboolean fmod_loaded;
+	extern void FMOD_ChangeVolume (float value);
+
+	if (fmod_loaded)
+	{
+		FMOD_ChangeVolume (bgmvolume.value);
+	}
+
 	if (!enabled)
 		return;
 
@@ -413,7 +420,6 @@ void CDAudio_Update (void)
 		}
 	}
 }
-
 
 int CDAudio_Init (void)
 {

@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define	LIGHTMAP_BLOCK_WIDTH	128
 #define	LIGHTMAP_BLOCK_HEIGHT	128 
-#define MAX_LIGHTMAPS			128//64
+#define MAX_LIGHTMAPS			192//64
 
 static	int	lightmap_textures;
 unsigned	blocklights[LIGHTMAP_BLOCK_WIDTH*LIGHTMAP_BLOCK_HEIGHT*3];
@@ -48,6 +48,7 @@ extern cvar_t gl_textureless; //R00k - textureless world
 
 // the lightmap texture data needs to be kept in
 // main memory so texsubimage can update properly
+///TODO MOVE THIS TO THE HUNK
 byte	lightmaps[4*MAX_LIGHTMAPS*LIGHTMAP_BLOCK_WIDTH*LIGHTMAP_BLOCK_HEIGHT];
 
 extern cvar_t r_skyscroll;
@@ -845,7 +846,7 @@ update:
 	base += (fa->light_t * LIGHTMAP_BLOCK_WIDTH + fa->light_s) * 4;
 	R_BuildLightMap (fa, base, LIGHTMAP_BLOCK_WIDTH * 4);
 }
-
+/*
 static void R_RenderAllDynamicLightmaps(model_t *model)
 {
 	msurface_t *s;
@@ -881,7 +882,7 @@ static void R_RenderAllDynamicLightmaps(model_t *model)
 		}
 	}
 }
-
+*/
 extern float turbsin[];
 
 void R_DrawWaterSurfaces (void)
@@ -1817,6 +1818,7 @@ int AllocBlock (int w, int h, int *x, int *y)
 		return texnum;
 	}
 
+	Con_Printf ("Current map exceeds MAX_LIGHTMAPS: %i\n", texnum);
 	Host_Error ("AllocBlock: full");
 	return 0;
 }

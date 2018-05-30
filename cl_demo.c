@@ -80,6 +80,9 @@ Called when a demo file runs out, or the user starts a game
 */
 void CL_StopPlayback (void)
 {
+	extern qboolean streamplaying;
+	extern void FMOD_Stop_Stream_f (void);
+
 	if (!cls.demoplayback)
 		return;
 
@@ -103,6 +106,8 @@ void CL_StopPlayback (void)
 		Movie_Stop ();		
 	}
 #endif
+	if (streamplaying)
+		FMOD_Stop_Stream_f ();
 }
 
 //this function will calculate movement for freemove
@@ -112,7 +117,6 @@ void CL_FreeMove (void)
 	vec3_t			wishvel;
 	float			fmove=0, smove=0;
 	static vec3_t	forward, right, up;
-	extern kbutton_t in_forward, in_back, in_moveleft, in_moveright, in_jump; 
 
 	AngleVectors (cl.viewangles, forward, right, up);	
 

@@ -302,11 +302,16 @@ void CL_Disconnect (void)
 	extern void Movie_StopPlayback (void);
 	extern qboolean Movie_IsActive (void);
 	extern	void VID_SetWindowText (void);
+	extern qboolean streamplaying;
+	extern void FMOD_Stop_Stream_f (void);
 
 	// stop sounds (especially looping!)
 	S_StopAllSounds (true);
 	
 	CL_StopPlayback ();
+
+	if (streamplaying)
+		FMOD_Stop_Stream_f ();
 	
 	#ifdef GLQUAKE
 	//if (nehahra)

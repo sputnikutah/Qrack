@@ -406,7 +406,7 @@ qboolean OnChange_Conback_Image (cvar_t *var, char *string)
 	if (strlen(string) < 1)
 		return false;
 
-	if (pic_24bit = GL_LoadPicImage(string, "conback", 0, 0, 0))
+	if (pic_24bit = GL_LoadPicImage(string, "conback", 0, 0, TEX_MIPMAP))
 	{
 		memcpy (&conback->texnum, &pic_24bit->texnum, sizeof(mpic_t) - 8);
 	}
@@ -2549,7 +2549,7 @@ mpic_t *GL_LoadPicImage (char *filename, char *id, int matchwidth, int matchheig
 	if (no24bitWad)
 		return NULL;
 
-	if (!(data = GL_LoadImagePixels(filename, matchwidth, matchheight, 0)))
+	if (!(data = GL_LoadImagePixels(filename, matchwidth, matchheight, mode)))
 			return NULL;
 
 	pic.width = image_width;

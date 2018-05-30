@@ -225,7 +225,7 @@ void CL_KeepaliveMessage (void)
 	Con_Printf ("--> client to server keepalive\n");
 
 	MSG_WriteByte (&cls.message, clc_nop);
-	NET_SendMessage (cls.netcon, &cls.message);//R00k changed to NET_SendUnreliableMessage from NET_SendMessage
+	NET_SendMessage (cls.netcon, &cls.message);
 
 	SZ_Clear (&cls.message);
 }
@@ -1629,6 +1629,9 @@ void CL_ParseServerMessage (void)
 	extern	cvar_t	cl_nomessageprint;
 	char		*str; //johnfitz
 	char		*s;	//PROQUAKE
+	extern qboolean fmod_loaded;
+	extern void FMOD_PlayTrack (byte track);
+
 
 // if recording demos, copy the message out
 	if (cl_shownet.value == 1)
@@ -1667,7 +1670,7 @@ void CL_ParseServerMessage (void)
 		switch (cmd)
 		{
 		default:
-			//Host_Error ("CL_ParseServerMessage: Illegible server message, %i", cmd);
+			Host_Error ("CL_ParseServerMessage: Illegible server message, %i", cmd);
 			break;
 			
 		case svc_nop:
@@ -1770,7 +1773,7 @@ void CL_ParseServerMessage (void)
 			break;			
 
 		case svc_setview:			
-			cl.viewentity = MSG_ReadShort ();
+				cl.viewentity = MSG_ReadShort ();
 			break;
 					
 		case svc_lightstyle:
@@ -1914,6 +1917,13 @@ void CL_ParseServerMessage (void)
 		case svc_cdtrack:
 			cl.cdtrack = MSG_ReadByte ();
 			cl.looptrack = MSG_ReadByte ();
+			
+			if (fmod_loaded)
+			{	
+				FMOD_PlayTrack (cl.cdtrack);
+				break;
+			}
+
 			if ((cls.demoplayback || cls.demorecording) && (cls.forcetrack != -1))
 				CDAudio_Play ((byte)cls.forcetrack, true);
 			else

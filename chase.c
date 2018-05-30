@@ -95,22 +95,23 @@ void Chase_Update (void)
 	}
 	else
 	{
-		AngleVectors (cl.lerpangles, forward, right, up);
-		
-		// calc exact destination
-		for (i=0 ; i<3 ; i++)
-			chase_dest[i] = r_refdef.vieworg[i] - forward[i]*chase_back.value - right[i]*chase_right.value;
-		
-		chase_dest[2] = r_refdef.vieworg[2] + chase_up.value;
-		
-		// find the spot the player is looking at
-		VectorMA (r_refdef.vieworg, 4096, forward, dest);
-		TraceLine (r_refdef.vieworg, dest, stop);
-		
-		// calculate pitch to look at the same spot from camera
-		VectorSubtract (stop, r_refdef.vieworg, stop);
-		dist = max(1, DotProduct(stop, forward));
-		r_refdef.viewangles[PITCH] = -180 / M_PI * atan2( stop[2], dist );
+			AngleVectors (cl.lerpangles, forward, right, up);
+			
+			// calc exact destination
+			for (i=0 ; i<3 ; i++)
+				chase_dest[i] = r_refdef.vieworg[i] - forward[i]*chase_back.value - right[i]*chase_right.value;
+			
+			chase_dest[2] = r_refdef.vieworg[2] + chase_up.value;
+			
+			// find the spot the player is looking at
+			VectorMA (r_refdef.vieworg, 4096, forward, dest);
+			TraceLine (r_refdef.vieworg, dest, stop);
+			
+			// calculate pitch to look at the same spot from camera
+			VectorSubtract (stop, r_refdef.vieworg, stop);
+			dist = max(1, DotProduct(stop, forward));
+			
+			r_refdef.viewangles[PITCH] = -180 / M_PI * atan2( stop[2], dist );
 	}
 
 	TraceLine (r_refdef.vieworg, chase_dest, stop);

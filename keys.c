@@ -1055,7 +1055,7 @@ void Key_Event (int key, qboolean down)
 		Cvar_Set ("vid_width", va("%i", 640));
 		Cvar_Set ("vid_height", va("%i",480));
 	*/
-		Cbuf_AddText("toggle vid_fullscreen;vid_restart;\n");
+		Cbuf_AddText("toggle vid_fullscreen;wait;vid_restart;\n");
 		Cbuf_Execute();
 		return;
 	}
