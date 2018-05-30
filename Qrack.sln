@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual C++ Express 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Qrack", "Qrack.vcproj", "{BDE46DF8-8D50-4BF8-B956-5AEB723C7E84}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		DX Debug|Win32 = DX Debug|Win32
+		DX Release|Win32 = DX Release|Win32
+		GL Debug|Win32 = GL Debug|Win32
+		GL Release|Win32 = GL Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BDE46DF8-8D50-4BF8-B956-5AEB723C7E84}.DX Debug|Win32.ActiveCfg = DX Debug|Win32
+		{BDE46DF8-8D50-4BF8-B956-5AEB723C7E84}.DX Debug|Win32.Build.0 = DX Debug|Win32
+		{BDE46DF8-8D50-4BF8-B956-5AEB723C7E84}.DX Release|Win32.ActiveCfg = DX Release|Win32
+		{BDE46DF8-8D50-4BF8-B956-5AEB723C7E84}.DX Release|Win32.Build.0 = DX Release|Win32
+		{BDE46DF8-8D50-4BF8-B956-5AEB723C7E84}.GL Debug|Win32.ActiveCfg = GL Debug|Win32
+		{BDE46DF8-8D50-4BF8-B956-5AEB723C7E84}.GL Debug|Win32.Build.0 = GL Debug|Win32
+		{BDE46DF8-8D50-4BF8-B956-5AEB723C7E84}.GL Release|Win32.ActiveCfg = GL Release|Win32
+		{BDE46DF8-8D50-4BF8-B956-5AEB723C7E84}.GL Release|Win32.Build.0 = GL Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
