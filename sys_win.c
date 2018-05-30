@@ -58,7 +58,7 @@ static	HANDLE	heventChild;
 static	void *memBasePtr = 0;//Reckless
 
 qboolean OnChange_sys_highpriority (cvar_t *, char *, qboolean *);
-cvar_t sys_highpriority = {"sys_highpriority", "1", true, false, OnChange_sys_highpriority};
+cvar_t sys_highpriority = {"sys_highpriority", "0", 1, false, OnChange_sys_highpriority};
 
 //void MaskExceptions (void);
 void Sys_InitDoubleTime (void);
@@ -67,7 +67,10 @@ void Sys_PopFPCW (void);
 
 // mh - handly little buffer for putting any short-term memory requirements into
 // avoids the need to malloc an array, then free it after, for a lot of setup and loading code
+#ifdef USESHADERS
 byte scratchbuf[SCRATCHBUF_SIZE];
+#endif
+
 
 // WinKeys system hook (from ezQuake)
 

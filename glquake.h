@@ -417,8 +417,8 @@ void R_SpawnDecal(vec3_t center, vec3_t normal, vec3_t tangent, int tex, int siz
 #define ISDEAD(i) ((i) >= 41 && (i) <= 102)
 
 //R00k: This is a crude FIRST attempt at a realtime server list.
-#define SERVERLIST_URL "http://servers.quakeone.com/"
-#define SERVERLIST_FILE "index.php?format=proquake"
+#define SERVERLIST_URL "http://quakeone.com/qrack/"
+#define SERVERLIST_FILE "servers.txt"
 
 //New stuff from RMQengine	--TESTING--
 

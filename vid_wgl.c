@@ -28,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 gl_brokendrivers_t gl_brokendrivers;
 #endif
 
-#define MAX_MODE_LIST	1200//R00k was 30
+#define MAX_MODE_LIST	600
 #define VID_ROW_SIZE	3
 #define WARP_WIDTH		320
 #define WARP_HEIGHT		200
@@ -1544,13 +1544,15 @@ Main Window procedure
 */
 LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	LONG		lRet = 0;//MH-GLQFIX
+	LONG	lRet = 0;//MH-GLQFIX
 	int		fActive, fMinimized;
 	extern unsigned	int uiWheelMessage;
 	extern void IN_RawInput_MouseRead(HANDLE in_device_handle);
 	extern cvar_t  m_raw_input;
 	extern cvar_t	m_dinput;
 	extern unsigned short	ramps[3][256];
+
+
 	if (uMsg == uiWheelMessage)
 	{
 		uMsg = WM_MOUSEWHEEL;
@@ -1593,6 +1595,7 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			Key_Event (IN_MapKey(lParam), true);
 			break;
 			
+
 		case WM_KEYUP:
 		case WM_SYSKEYUP:
 			Key_Event (IN_MapKey(lParam), false);

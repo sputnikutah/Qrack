@@ -78,7 +78,7 @@ cvar_t	cl_gun_offset = {"cl_gun_offset","0", true};
 cvar_t	cl_gun_drift = {"cl_gun_drift","0.2", true};
 cvar_t	cl_gun_idle_movement = {"cl_gun_idle_movement","0", true};
 
-cvar_t	cl_viewbob	= {"cl_viewbob","0", false};
+cvar_t	cl_viewbob	= {"cl_bob_pov","0", false};
 cvar_t	cl_bob		= {"cl_bob","0.02", false};
 cvar_t	cl_bobcycle = {"cl_bobcycle","0.6", false};
 cvar_t	cl_bobup	= {"cl_bobup","0.5", false};

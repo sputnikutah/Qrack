@@ -53,6 +53,8 @@ r_draworder 0		sets the current value to 0
 Cvars are restricted from having the same names as commands to keep this
 interface from being ambiguous.
 */
+
+
 /*
 // cvar flags
 #define	CVAR_NONE			0

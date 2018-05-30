@@ -212,7 +212,7 @@ void Z_Free (void *ptr)
 
 	if (block->tag == 0)
 	{
-		Con_Printf ("Z_Free: freed a pointer without a block tag");//R00k workaround, fixme.
+		Con_Printf ("Z_Free: block already marked as free");//R00k workaround, fixme.
 		return;		
 	}
 
