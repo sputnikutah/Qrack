@@ -261,7 +261,6 @@ void FMOD_Play_Sample_f (void)
 void FMOD_PlayTrack (int track)
 {
 	char streamname[MAX_OSPATH];
-//	char streamdir[1024];
 
 	if (cls.timedemo) //Do not play the external music when doing a timedemo.
 	{
@@ -271,11 +270,10 @@ void FMOD_PlayTrack (int track)
 	if (streamplaying)
 		FMOD_Stop_Stream_f ();
 
-//	Q_strncpyz (streamdir, com_basedir, sizeof(streamdir));
-	Q_snprintfz (streamname, sizeof(streamname), "%s/music/track0%d.mp3",com_gamedir,track);
+	Q_snprintfz (streamname, sizeof(streamname), "%s/music/track%02d.mp3",com_gamedir,track);
 	
 	if (!(COM_FindFile(streamname)))
-		Q_snprintfz (streamname, sizeof(streamname), "%s/music/track0%d.ogg",com_gamedir,track);			
+		Q_snprintfz (streamname, sizeof(streamname), "%s/music/track%02d.ogg",com_gamedir,track);			
 
 	FMOD_Play_Stream_f (streamname);
 }
