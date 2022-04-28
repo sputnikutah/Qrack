@@ -46,7 +46,7 @@ cvar_t	sv_gravity		= {"sv_gravity", "800", false, true};
 cvar_t	sv_maxvelocity	= {"sv_maxvelocity", "2000"};
 cvar_t	sv_nostep		= {"sv_nostep", "0"};
 cvar_t	sv_sound_land	= {"sv_sound_land","demon/dland2.wav",true,false};
-cvar_t	sv_disable_noclip_touch_triggers = {"sv_disable_noclip_touch_triggers","0"};
+cvar_t	sv_disable_noclip_touch_triggers = {"sv_disable_noclip_touch_triggers","1"};
 cvar_t	sv_freezenonclients = {"sv_freezenonclients","0",false,false};
 
 #define	MOVE_EPSILON	0.01
@@ -1362,25 +1362,27 @@ void SV_Physics_Step (edict_t *ent)
 	qboolean	hitsound;
 
 // freefall if not onground
-	if (!((int)ent->v.flags & (FL_ONGROUND | FL_FLY | FL_SWIM)))
+	if (host_framecount > 20000)// hold on while we finish loading... (fix for sm215_markie)
 	{
-		if (ent->v.velocity[2] < sv_gravity.value*-0.1)
-			hitsound = true;
-		else
-			hitsound = false;
-
-		SV_AddGravity (ent);
-		SV_CheckVelocity (ent);
-		SV_FlyMove (ent, host_frametime, NULL);
-		SV_LinkEdict (ent, true);
-
-		if ((int)ent->v.flags & FL_ONGROUND)	// just hit ground
+		if (!((int)ent->v.flags & (FL_ONGROUND | FL_FLY | FL_SWIM)))
 		{
-			if (hitsound)
-				SV_StartSound (ent, 0, sv_sound_land.string, 255, 1);
+			if (ent->v.velocity[2] < sv_gravity.value*-0.1)
+				hitsound = true;
+			else
+				hitsound = false;
+
+			SV_AddGravity (ent);
+			SV_CheckVelocity (ent);
+			SV_FlyMove (ent, host_frametime, NULL);
+			SV_LinkEdict (ent, true);
+
+			if ((int)ent->v.flags & FL_ONGROUND)	// just hit ground
+			{
+				if (hitsound && *sv_sound_land.string)
+					SV_StartSound (ent, 0, sv_sound_land.string, 255, 1);
+			}
 		}
 	}
-
 // regular thinking
 	SV_RunThink (ent);
 

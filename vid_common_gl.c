@@ -209,17 +209,20 @@ GL_Init
 */
 void GL_Init (void)
 {
-	gl_vendor = glGetString (GL_VENDOR);
+	gl_vendor	= glGetString (GL_VENDOR);
+	gl_renderer	= glGetString (GL_RENDERER);
+	gl_version	= glGetString (GL_VERSION);
+	gl_extensions	= glGetString (GL_EXTENSIONS);
+
 	Con_Printf ("GL_VENDOR: %s\n", gl_vendor);
-	gl_renderer = glGetString (GL_RENDERER);
 	Con_Printf ("GL_RENDERER: %s\n", gl_renderer);
-	gl_version = glGetString (GL_VERSION);
 	Con_Printf ("GL_VERSION: %s\n", gl_version);
 	Con_Print ("\n");
-
-	gl_extensions = glGetString (GL_EXTENSIONS);
+	
 	if (COM_CheckParm("-gl_ext"))
+	{
 		Con_Printf ("GL_EXTENSIONS: %s\n", gl_extensions);
+	}
 
 	if (!Q_strncasecmp((char *)gl_renderer, "PowerVR", 7))
 		fullsbardraw = true;

@@ -31,15 +31,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#define MINIMUM_WIN_MEMORY	0x4000000	// 64MB //this is allocated for low hunk mem (default)
-#define MAXIMUM_WIN_MEMORY	0x8000000	// 128MB // this is allocated for total mem if no command-line parm defined.
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
+#define MINIMUM_WIN_MEMORY	0x8000000	// 128MB //this is allocated for low hunk mem (default)
+#define MAXIMUM_WIN_MEMORY	0x10000000	// 256MB // this is allocated for total mem if no command-line parm defined.
 
 #define CONSOLE_ERROR_TIMEOUT	60.0	// # of seconds to wait on Sys_Error running
 										// dedicated before exiting
-#define PAUSE_SLEEP				50		// sleep time on pause or minimization
+#define PAUSE_SLEEP			50		// sleep time on pause or minimization
 #define NOT_FOCUS_SLEEP			20		// sleep time when not focus
 
-int			starttime;
+int		starttime;
 qboolean	ActiveApp, Minimized;
 qboolean	WinNT, Win2K, WinXP, Win2K3, WinVISTA, Win7;
 
@@ -56,6 +60,8 @@ static	HANDLE	heventParent;
 static	HANDLE	heventChild;
 
 static	void *memBasePtr = 0;//Reckless
+
+typedef HRESULT (WINAPI *SetProcessDpiAwarenessFunc)(_In_ DWORD value);
 
 qboolean OnChange_sys_highpriority (cvar_t *, char *, qboolean *);
 cvar_t sys_highpriority = {"sys_highpriority", "0", 1, false, OnChange_sys_highpriority};
@@ -350,17 +356,37 @@ void Sys_MakeCodeWriteable (unsigned long startaddr, unsigned long length)
 Sys_Init
 ================
 */
+
 void Sys_Init (void)
 {
-	OSVERSIONINFO 	osInfo;
+ 	NTSTATUS(WINAPI * RtlGetVersion)(LPOSVERSIONINFOEXW);
+	OSVERSIONINFOEXW osInfo;
 
-	osInfo.dwOSVersionInfoSize = sizeof(osInfo);
+	*(FARPROC*)&RtlGetVersion = GetProcAddress(GetModuleHandleA("ntdll"), "RtlGetVersion");
 
-	if (!GetVersionExA(&osInfo))
-		Sys_Error ("Couldn't get OS info");
-
-	if ((osInfo.dwMajorVersion < 4) || (osInfo.dwPlatformId == VER_PLATFORM_WIN32s))
+	if (NULL != RtlGetVersion)
+	{
+		osInfo.dwOSVersionInfoSize = sizeof(osInfo);
+		RtlGetVersion(&osInfo);
+		if ((osInfo.dwMajorVersion < 4) || (osInfo.dwPlatformId == VER_PLATFORM_WIN32s))
 		Sys_Error ("Qrack requires at least Win95 or greater.");
+
+	}
+	// Use raw resolutions, not scaled (from ezQuake)
+	{
+		HMODULE lib = LoadLibrary("Shcore.dll");
+		if (lib != NULL) 
+		{
+			SetProcessDpiAwarenessFunc SetProcessDpiAwareness;
+
+			SetProcessDpiAwareness = (SetProcessDpiAwarenessFunc) GetProcAddress(lib, "SetProcessDpiAwareness");
+			if (SetProcessDpiAwareness != NULL) 
+			{
+				SetProcessDpiAwareness(2);
+			}
+			FreeLibrary(lib);
+		}
+	}
 }
 
 void Sys_Error (char *error, ...)
@@ -565,12 +591,13 @@ void Sys_InitDoubleTime (void)
 
 /*
 ================
-Sys_DoubleTime
+Sys_DoubleTime	-- MH's high-performance/stable Sys_DoubleTime method. (ie, multi-core clock fix)
 ================
-MH's high-performance/stable Sys_DoubleTime method. (ie, multi-core clock fix)
 
-We have two main methods of timing on Windows: QueryPerformanceCounter and timeGetTime. QueryPerformanceCounter sucks because it's unstable on many PCs but it does have high resolution. timeGetTime sucks because it's resolution - while quite high - isn't high enough for Quakes 72 FPS but it is stable on all PCs.
-So what I did was use timeGetTime as a solid baseline and QueryPerformanceCounter to fill in the sub-millisecond gaps
+	We have two main methods of timing on Windows: QueryPerformanceCounter and timeGetTime. 
+ QueryPerformanceCounter sucks because it's unstable on many PCs but it does have high resolution. 
+ timeGetTime sucks because it's resolution - while quite high - isn't high enough for Quakes 72 FPS but it is stable on all PCs.
+ So what I did was use timeGetTime as a solid baseline and QueryPerformanceCounter to fill in the sub-millisecond gaps
 */
 
 double Sys_DoubleTime (void) 
@@ -635,7 +662,7 @@ double Sys_DoubleTime (void)
 	if (now - starttime == 0)
 		return 0.0;
 
-	return (now - starttime) / 1000.0;
+	return (now - starttime) / 1000.0;   
 }
 
 char *Sys_ConsoleInput (void)
@@ -807,10 +834,11 @@ void SleepUntilInput (int time)
 	MsgWaitForMultipleObjects (1, &tevent, FALSE, time, QS_ALLINPUT);
 }
 
+extern void RestoreHWGamma (void);
 LONG WINAPI ABANDONSHIP (LPEXCEPTION_POINTERS escape_pod)
 {
 	MessageBox (hwnd_dialog, "An error has occured forcing Qrack to shutdown.\n All of your current settings will be saved.","Qrack",MB_OK | MB_ICONSTOP);
-
+	RestoreHWGamma();
 	Sys_Quit();
 
 	return EXCEPTION_EXECUTE_HANDLER;

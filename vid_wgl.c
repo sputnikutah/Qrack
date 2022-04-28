@@ -84,7 +84,7 @@ static	qboolean	vid_initialized = false;
 static	qboolean	windowed, leavecurrentmode;
 static	qboolean	vid_canalttab = false;
 static	qboolean	vid_wassuspended = false;
-static	int			windowed_mouse;
+static	qboolean	windowed_mouse;
 extern	qboolean	mouseactive;	// from in_win.c
 static	HICON		hIcon;
 
@@ -119,47 +119,49 @@ qboolean	customgamma = false;
 void RestoreHWGamma (void);
 
 HWND WINAPI InitializeWindow (HINSTANCE hInstance, int nCmdShow);
+
 #ifdef USESHADERS
-PFNGLBINDBUFFERPROC qglBindBuffer = NULL;
-PFNGLDELETEBUFFERSPROC qglDeleteBuffers = NULL;
-PFNGLGENBUFFERSPROC qglGenBuffers = NULL;
-PFNGLISBUFFERPROC qglIsBuffer = NULL;
-PFNGLBUFFERDATAPROC qglBufferData = NULL;
-PFNGLBUFFERSUBDATAPROC qglBufferSubData = NULL;
-PFNGLGETBUFFERSUBDATAPROC qglGetBufferSubData = NULL;
-PFNGLMAPBUFFERPROC qglMapBuffer = NULL;
-PFNGLUNMAPBUFFERPROC qglUnmapBuffer = NULL;
-PFNGLGETBUFFERPARAMETERIVPROC qglGetBufferParameteriv = NULL;
-PFNGLGETBUFFERPOINTERVPROC qglGetBufferPointerv = NULL;
+PFNGLBINDBUFFERPROC						qglBindBuffer			= NULL;
+PFNGLDELETEBUFFERSPROC					qglDeleteBuffers		= NULL;
+PFNGLGENBUFFERSPROC						qglGenBuffers			= NULL;
+PFNGLISBUFFERPROC						qglIsBuffer				= NULL;
+PFNGLBUFFERDATAPROC						qglBufferData			= NULL;
+PFNGLBUFFERSUBDATAPROC					qglBufferSubData		= NULL;
+PFNGLGETBUFFERSUBDATAPROC				qglGetBufferSubData		= NULL;
+PFNGLMAPBUFFERPROC						qglMapBuffer			= NULL;
+PFNGLUNMAPBUFFERPROC					qglUnmapBuffer			= NULL;
+PFNGLGETBUFFERPARAMETERIVPROC			qglGetBufferParameteriv = NULL;
+PFNGLGETBUFFERPOINTERVPROC				qglGetBufferPointerv	= NULL;
+
 // vertex/fragment program
-PFNGLBINDPROGRAMARBPROC qglBindProgramARB = NULL;
-PFNGLDELETEPROGRAMSARBPROC qglDeleteProgramsARB = NULL;
-PFNGLGENPROGRAMSARBPROC qglGenProgramsARB = NULL;
-PFNGLGETPROGRAMENVPARAMETERDVARBPROC qglGetProgramEnvParameterdvARB = NULL;
-PFNGLGETPROGRAMENVPARAMETERFVARBPROC qglGetProgramEnvParameterfvARB = NULL;
-PFNGLGETPROGRAMLOCALPARAMETERDVARBPROC qglGetProgramLocalParameterdvARB = NULL;
-PFNGLGETPROGRAMLOCALPARAMETERFVARBPROC qglGetProgramLocalParameterfvARB = NULL;
-PFNGLGETPROGRAMSTRINGARBPROC qglGetProgramStringARB = NULL;
-PFNGLGETPROGRAMIVARBPROC qglGetProgramivARB = NULL;
-PFNGLISPROGRAMARBPROC qglIsProgramARB = NULL;
-PFNGLPROGRAMENVPARAMETER4DARBPROC qglProgramEnvParameter4dARB = NULL;
-PFNGLPROGRAMENVPARAMETER4DVARBPROC qglProgramEnvParameter4dvARB = NULL;
-PFNGLPROGRAMENVPARAMETER4FARBPROC qglProgramEnvParameter4fARB = NULL;
-PFNGLPROGRAMENVPARAMETER4FVARBPROC qglProgramEnvParameter4fvARB = NULL;
-PFNGLPROGRAMLOCALPARAMETER4DARBPROC qglProgramLocalParameter4dARB = NULL;
-PFNGLPROGRAMLOCALPARAMETER4DVARBPROC qglProgramLocalParameter4dvARB = NULL;
-PFNGLPROGRAMLOCALPARAMETER4FARBPROC qglProgramLocalParameter4fARB = NULL;
-PFNGLPROGRAMLOCALPARAMETER4FVARBPROC qglProgramLocalParameter4fvARB = NULL;
-PFNGLPROGRAMSTRINGARBPROC qglProgramStringARB = NULL;
+PFNGLBINDPROGRAMARBPROC					qglBindProgramARB					= NULL;
+PFNGLDELETEPROGRAMSARBPROC				qglDeleteProgramsARB				= NULL;
+PFNGLGENPROGRAMSARBPROC					qglGenProgramsARB					= NULL;
+PFNGLGETPROGRAMENVPARAMETERDVARBPROC	qglGetProgramEnvParameterdvARB		= NULL;
+PFNGLGETPROGRAMENVPARAMETERFVARBPROC	qglGetProgramEnvParameterfvARB		= NULL;
+PFNGLGETPROGRAMLOCALPARAMETERDVARBPROC	qglGetProgramLocalParameterdvARB	= NULL;
+PFNGLGETPROGRAMLOCALPARAMETERFVARBPROC	qglGetProgramLocalParameterfvARB	= NULL;
+PFNGLGETPROGRAMSTRINGARBPROC			qglGetProgramStringARB				= NULL;
+PFNGLGETPROGRAMIVARBPROC				qglGetProgramivARB					= NULL;
+PFNGLISPROGRAMARBPROC					qglIsProgramARB						= NULL;
+PFNGLPROGRAMENVPARAMETER4DARBPROC		qglProgramEnvParameter4dARB			= NULL;
+PFNGLPROGRAMENVPARAMETER4DVARBPROC		qglProgramEnvParameter4dvARB		= NULL;
+PFNGLPROGRAMENVPARAMETER4FARBPROC		qglProgramEnvParameter4fARB			= NULL;
+PFNGLPROGRAMENVPARAMETER4FVARBPROC		qglProgramEnvParameter4fvARB		= NULL;
+PFNGLPROGRAMLOCALPARAMETER4DARBPROC		qglProgramLocalParameter4dARB		= NULL;
+PFNGLPROGRAMLOCALPARAMETER4DVARBPROC	qglProgramLocalParameter4dvARB		= NULL;
+PFNGLPROGRAMLOCALPARAMETER4FARBPROC		qglProgramLocalParameter4fARB		= NULL;
+PFNGLPROGRAMLOCALPARAMETER4FVARBPROC	qglProgramLocalParameter4fvARB		= NULL;
+PFNGLPROGRAMSTRINGARBPROC				qglProgramStringARB					= NULL;
 
-PFNGLVERTEXATTRIBPOINTERARBPROC qglVertexAttribPointerARB = NULL;
-PFNGLENABLEVERTEXATTRIBARRAYARBPROC qglEnableVertexAttribArrayARB = NULL;
-PFNGLDISABLEVERTEXATTRIBARRAYARBPROC qglDisableVertexAttribArrayARB = NULL;
+PFNGLVERTEXATTRIBPOINTERARBPROC			qglVertexAttribPointerARB			= NULL;
+PFNGLENABLEVERTEXATTRIBARRAYARBPROC		qglEnableVertexAttribArrayARB		= NULL;
+PFNGLDISABLEVERTEXATTRIBARRAYARBPROC	qglDisableVertexAttribArrayARB		= NULL;
 
-PFNGLDRAWRANGEELEMENTSPROC qglDrawRangeElements = NULL;
-PFNGLLOCKARRAYSEXTPROC qglLockArrays = NULL;
-PFNGLUNLOCKARRAYSEXTPROC qglUnlockArrays = NULL;
-PFNGLMULTIDRAWARRAYSPROC qglMultiDrawArrays = NULL;
+PFNGLDRAWRANGEELEMENTSPROC				qglDrawRangeElements				= NULL;
+PFNGLLOCKARRAYSEXTPROC					qglLockArrays						= NULL;
+PFNGLUNLOCKARRAYSEXTPROC				qglUnlockArrays						= NULL;
+PFNGLMULTIDRAWARRAYSPROC				qglMultiDrawArrays					= NULL;
 
 qboolean gl_ext_compiled_vertex_array = false;
 #endif
@@ -189,9 +191,8 @@ cvar_t	vid_mode				= {"vid_mode","0", false};				// Note that 0 is MODE_WINDOWED
 cvar_t	_vid_default_mode		= {"_vid_default_mode","0", true};		// Note that 3 is MODE_FULLSCREEN_DEFAULT
 cvar_t	_vid_default_mode_win	= {"_vid_default_mode_win","3", true};
 cvar_t	vid_force_aspect_ratio	= {"vid_force_aspect_ratio","1", true}; // force 2d images to conform to the monitor's native aspect
-cvar_t	vid_config_x			= {"vid_config_x","800", true};
-cvar_t	vid_config_y			= {"vid_config_y","600", true};
-cvar_t	vid_stretch_by_2		= {"vid_stretch_by_2","1", true};
+cvar_t	vid_width_window		= {"vid_width_window","800", true};
+cvar_t	vid_height_window		= {"vid_height_window","600", true};
 cvar_t	_windowed_mouse			= {"_windowed_mouse","1", true};
 
 qboolean OnChange_con_textsize (cvar_t *var, char *string);
@@ -207,7 +208,6 @@ qboolean OnChange_vid_vsync(cvar_t *var, char *string)
 	return false;
 }
 cvar_t	vid_vsync = {"vid_vsync", "0",true,false,OnChange_vid_vsync};//R00k set to 0 default to reduce DIB errors
-
 
 //R00k realtime console resizing
 extern mpic_t *conback;
@@ -289,21 +289,12 @@ void CheckVsyncControlExtensions(void)
 //		Con_Printf ("арнинг: vertical sync not supported (extension not found)\n");
 }
 #ifdef USESHADERS
-#define polyblend_vp \
-	"!!ARBvp1.0\n" \
-	"MOV result.position, vertex.attrib[0];\n" \
-	"MOV result.color, program.local[0];\n" \
-	"END\n"
+/*
 
 #define bbox_vp \
 	"!!ARBvp1.0\n" \
 	TRANSFORMVERTEX ("result.position", "vertex.attrib[0]") \
 	"MOV result.color, program.local[0];\n" \
-	"END\n"
-
-#define polyblend_fp \
-	"!!ARBfp1.0\n" \
-	"MOV result.color, fragment.color;\n" \
 	"END\n"
 
 #define showtris_fp \
@@ -312,10 +303,7 @@ void CheckVsyncControlExtensions(void)
 	"END\n"
 
 GLuint arb_bbox_vp = 0;
-GLuint arb_polyblend_vp = 0;
-GLuint arb_polyblend_fp = 0;
 GLuint arb_showtris_fp = 0;
-
 
 #define blur_vp \
 	"!!ARBvp1.0\n" \
@@ -343,6 +331,20 @@ GLuint arb_showtris_fp = 0;
 
 GLuint arb_blur_vp = 0;
 GLuint arb_blur_fp = 0;
+*/
+#define polyblend_vp \
+	"!!ARBvp1.0\n" \
+	"MOV result.position, vertex.attrib[0];\n" \
+	"MOV result.color, program.local[0];\n" \
+	"END\n"
+
+#define polyblend_fp \
+	"!!ARBfp1.0\n" \
+	"MOV result.color, fragment.color;\n" \
+	"END\n"
+
+GLuint arb_polyblend_vp = 0;
+GLuint arb_polyblend_fp = 0;
 
 #define underwater_vp \
 	"!!ARBvp1.0\n" \
@@ -639,9 +641,16 @@ qboolean VID_SetWindowedMode (int modenum)
 	DIBHeight = modelist[modenum].height;
 
 	if (vid_borderless.value)
-		WindowStyle = WS_OVERLAPPED | WS_CHILD | WS_CLIPCHILDREN | WS_SYSMENU;
+		WindowStyle = WS_POPUP | WS_SYSMENU;
 	else
-		WindowStyle = WS_OVERLAPPED | WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+	{
+		//johnfitz -- if width and height match desktop size, do aguirRe's trick of making the window have no titlebar/borders
+		if (DIBWidth == GetSystemMetrics(SM_CXSCREEN) && DIBHeight == GetSystemMetrics(SM_CYSCREEN))
+			WindowStyle = WS_POPUP; // Window covers entire screen; no caption, borders etc
+		else
+			WindowStyle = WS_OVERLAPPED | WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+		//johnfitz
+	}
 
 	ExWindowStyle = 0;
 
@@ -660,7 +669,7 @@ qboolean VID_SetWindowedMode (int modenum)
 		 rect.left, rect.top,
 		 width,
 		 height,
-		 (WindowStyle & WS_CHILD) ? GetDesktopWindow() : NULL, // child require parent window
+		 NULL, 
 		 NULL,
 		 global_hInstance,
 		 NULL);
@@ -695,6 +704,7 @@ qboolean VID_SetWindowedMode (int modenum)
 	SendMessage (mainwindow, WM_SETICON, (WPARAM)TRUE, (LPARAM)hIcon);
 	SendMessage (mainwindow, WM_SETICON, (WPARAM)FALSE, (LPARAM)hIcon);
 	VID_SetWindowText();
+	
 	return true;
 }
 
@@ -729,7 +739,7 @@ qboolean VID_SetFullDIBMode (int modenum)
 
 	DIBWidth = modelist[modenum].width;
 	DIBHeight = modelist[modenum].height;
-	
+
 	WindowStyle = WS_POPUP;
 	ExWindowStyle = 0;
 
@@ -825,9 +835,18 @@ int VID_SetMode (int modenum, unsigned char *palette)
 	}
 	else if (modelist[modenum].type == MS_FULLDIB)
 	{
-		stat = VID_SetFullDIBMode(modenum);
-		IN_ActivateMouse ();
-		IN_HideMouse ();
+		if (_windowed_mouse.value && key_dest == key_game)
+		{
+			stat = VID_SetFullDIBMode(modenum);
+			IN_ActivateMouse ();
+			IN_HideMouse ();
+		}
+		else
+		{
+			IN_DeactivateMouse ();
+			IN_ShowMouse ();
+			stat = VID_SetFullDIBMode(modenum);
+		}
 	}
 	else
 	{
@@ -1161,15 +1180,18 @@ void VID_Restart (void)
 	if (modelist[vid_default].type != MS_WINDOWED)
 	{
 		mode_changed = true;
-		/*
-		todo add cvars for windowed size
-		Cvar_Set ("vid_width", va("%i", 640));
-		Cvar_Set ("vid_height", va("%i",480));
-		*/
 	}
 
-	if (modelist[vid_default].width != (int)vid_width.value || modelist[vid_default].height != (int)vid_height.value)
-		mode_changed = true;
+	if (vid_fullscreen.value)
+	{
+		if (modelist[vid_default].width != (int)vid_width.value || modelist[vid_default].height != (int)vid_height.value)
+			mode_changed = true;
+	}
+	else
+	{
+		if (modelist[vid_default].width != (int)vid_width_window.value || modelist[vid_default].height != (int)vid_height_window.value)
+			mode_changed = true;
+	}
 
 	if (mode_changed)
 	{
@@ -1182,10 +1204,7 @@ void VID_Restart (void)
 		{
 			for (i=1; i<nummodes; i++)
 			{
-				if (modelist[i].width == (int)vid_width.value &&
-					modelist[i].height == (int)vid_height.value &&
-					modelist[i].bpp == (int)vid_bpp.value &&
-					modelist[i].refreshrate == (int)vid_refreshrate.value)
+				if (modelist[i].width == (int)vid_width.value && modelist[i].height == (int)vid_height.value &&	modelist[i].bpp == (int)vid_bpp.value && modelist[i].refreshrate == (int)vid_refreshrate.value)
 				{
 					break;
 				}
@@ -1216,20 +1235,20 @@ void VID_Restart (void)
 
 			ReleaseDC (NULL, hdc);
 
-			if (vid_width.value < 320)
+			if (vid_width_window.value < 320)
 			{
 				Con_Printf ("Window width can't be less than 320\n");
 				return;
 			}
 
-			if (vid_height.value < 200)
+			if (vid_height_window.value < 200)
 			{
 				Con_Printf ("Window height can't be less than 200\n");
 				return;
 			}
 
-			modelist[0].width = (int)vid_width.value;
-			modelist[0].height = (int)vid_height.value;
+			modelist[0].width = (int)vid_width_window.value;
+			modelist[0].height = (int)vid_height_window.value;
 
 			modelist[0].refreshrate = (int)vid_refreshrate.value;
 			sprintf (modelist[0].modedesc, "%dx%dx%d %dHz",	 modelist[0].width,	 modelist[0].height, modelist[0].bpp, modelist[0].refreshrate);
@@ -1282,8 +1301,11 @@ void VID_Restart (void)
 		maindc = GetDC(mainwindow);
 		bSetupPixelFormat(maindc);
 
-		vid.aspect = ((float)vid_height.value / (float)vid_width.value);
-		
+		if (vid_fullscreen.value)
+			vid.aspect = ((float)vid_height.value / (float)vid_width.value);
+		else
+			vid.aspect = ((float)vid_height_window.value / (float)vid_width_window.value);
+
 		// if bpp changes, recreate render context and reload textures
 		if (modelist[vid_default].bpp != oldmode.bpp)
 		{
@@ -1314,11 +1336,20 @@ void VID_Restart (void)
 //
 // keep cvars in line with actual mode
 //
-	Cvar_Set ("vid_width", va("%i", modelist[vid_default].width));
-	Cvar_Set ("vid_height", va("%i", modelist[vid_default].height));
+	Cvar_Set ("vid_fullscreen", (windowed) ? "0" : "1");
+
+	if (vid_fullscreen.value)
+	{
+		Cvar_Set ("vid_width", va("%i", modelist[vid_default].width));
+		Cvar_Set ("vid_height", va("%i", modelist[vid_default].height));
+	}
+	else
+	{
+		Cvar_Set ("vid_width_window", va("%i", modelist[vid_default].width));
+		Cvar_Set ("vid_height_window", va("%i", modelist[vid_default].height));
+	}	
 	Cvar_Set ("vid_bpp", va("%i", modelist[vid_default].bpp));
 	Cvar_Set ("vid_refreshrate", va("%i", modelist[vid_default].refreshrate));
-	Cvar_Set ("vid_fullscreen", (windowed) ? "0" : "1");
 }
 
 /*
@@ -1454,20 +1485,25 @@ void AppActivate (BOOL fActive, BOOL minimize)
 ****************************************************************************/
 {
 	static BOOL	sound_active;
-
+	extern cvar_t snd_nofocusblock;
+	
+//	DSBUFFERDESC dsbuf;
 	ActiveApp = fActive;
 	Minimized = minimize;
 
 // enable/disable sound on focus gain/loss
-	if (!ActiveApp && sound_active)
+	if (snd_nofocusblock.value)//R00k added for streamers to be able to alt-tab to desktop and not mute the game.
 	{
-		S_BlockSound ();
-		sound_active = false;
-	}
-	else if (ActiveApp && !sound_active)
-	{
-		S_UnblockSound ();
-		sound_active = true;
+		if (!ActiveApp && sound_active)
+		{
+			S_BlockSound ();
+			sound_active = false;
+		}
+		else if (ActiveApp && !sound_active)
+		{
+			S_UnblockSound ();
+			sound_active = true;
+		}
 	}
 
 	if (fActive)
@@ -1666,7 +1702,9 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			AppActivate(!(fActive == WA_INACTIVE), fMinimized);
 		
 			ClearAllStates();// fix the leftover Key_Alt from any Alt-Tab or the like that switched us away
-			VID_SetDeviceGammaRamp ((unsigned short *)ramps);//v2.012
+			if (currentgammaramp && vid_hwgammacontrol.value)
+				VID_SetDeviceGammaRamp(currentgammaramp);
+
 			//R00k re-init the mouse after alt-tabbing... (v1.9)
 			if ((!mouseactive)&&(fActive))//RESETMOUSE
 			{	
@@ -1991,7 +2029,8 @@ void VID_InitFullDIB (HINSTANCE hInstance)
 		{
 			devmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY; //johnfitz -- refreshrate;
 
-			if (ChangeDisplaySettings(&devmode, CDS_TEST | CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL)
+//R00k:		if (ChangeDisplaySettings(&devmode, CDS_TEST | CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL) //this takes WAY too long; 14 seconds for all modes (windows 8++ bug?!!)
+			if (stat)//R00k: just accept
 			{
 				modelist[nummodes].type = MS_FULLDIB;
 				modelist[nummodes].width = devmode.dmPelsWidth;
@@ -2091,7 +2130,7 @@ void VID_InitFullDIB (HINSTANCE hInstance)
 		switch (bpp)
 		{
 			case 16:
-				bpp = 32;
+				bpp = 24;
 				break;
 
 			case 32:
@@ -2217,9 +2256,8 @@ void VID_Init(unsigned char *palette)
 	Cvar_RegisterVariable (&con_textsize);
 	Cvar_RegisterVariable (&_vid_default_mode);
 	Cvar_RegisterVariable (&_vid_default_mode_win);
-	Cvar_RegisterVariable (&vid_config_x);
-	Cvar_RegisterVariable (&vid_config_y);
-	Cvar_RegisterVariable (&vid_stretch_by_2);
+	Cvar_RegisterVariable (&vid_width_window);
+	Cvar_RegisterVariable (&vid_height_window);
 	Cvar_RegisterVariable (&_windowed_mouse);
 	Cvar_RegisterVariable (&vid_hwgammacontrol);
 	Cvar_RegisterVariable (&vid_refreshrate);
@@ -2230,8 +2268,8 @@ void VID_Init(unsigned char *palette)
 	Cvar_RegisterVariable (&vid_width); //johnfitz
 	Cvar_RegisterVariable (&vid_height); //johnfitz
 	Cvar_RegisterVariable (&vid_bpp); //johnfitz
-	Cvar_RegisterVariable (&vid_borderless);
 	Cvar_RegisterVariable (&vid_force_aspect_ratio);
+	Cvar_RegisterVariable (&vid_borderless);
 
 	Cmd_AddCommand ("vid_unlock", VID_Unlock); //johnfitz
 	Cmd_AddCommand ("vid_restart", VID_Restart); //johnfitz
@@ -2433,7 +2471,11 @@ void VID_Init(unsigned char *palette)
 
 				if (!vid_default)
 				{
-					Sys_Error ("Specified video mode not available");
+					//Sys_Error ("Specified video mode not available");
+					windowed = true;
+					width = 640;
+					height = 480;
+					vid_default = MODE_WINDOWED;
 				}
 			}
 		}
@@ -2627,7 +2669,10 @@ void VID_Menu_Init (void)
 			vid_menu_nummodes++;
 		}
 	}
-	con_size = floor(vid_width.value / vid_conwidth.value);
+	if (vid_fullscreen.value)
+		con_size = floor(vid_width.value / vid_conwidth.value);
+	else
+		con_size = floor(vid_width_window.value / vid_conwidth.value);
 	con_size = bound (1,con_size,6);
 }
 
@@ -2736,34 +2781,67 @@ void VID_Menu_ChooseNextMode (int dir)
 {
 	int i;
 
-	for (i=0;i<vid_menu_nummodes;i++)
+	if (vid_fullscreen.value)
 	{
-		if (vid_menu_modes[i].width == vid_width.value && vid_menu_modes[i].height == vid_height.value)
-			break;
-	}
+		for (i=0;i<vid_menu_nummodes;i++)
+		{
+			if (vid_menu_modes[i].width == vid_width.value && vid_menu_modes[i].height == vid_height.value)
+				break;
+		}
 
-	if (i==vid_menu_nummodes) //can't find it in list, so it must be a custom windowed res
-	{
-		i = 0;
+		if (i==vid_menu_nummodes) //can't find it in list, so it must be a custom windowed res
+		{
+			i = 0;
+		}
+		else
+		{
+			i+=dir;
+			if (i>=vid_menu_nummodes)
+				i = 0;
+			else if (i<0)
+				i = vid_menu_nummodes-1;
+		}
+
+		Cvar_SetValue ("vid_width",(float)vid_menu_modes[i].width);
+		Cvar_SetValue ("vid_height",(float)vid_menu_modes[i].height);
+		VID_Menu_RebuildRateList ();
+	//	VID_Menu_CalcAspectRatio();
+		if (vid_conwidth.value > vid_width.value)
+			Cvar_SetValue ("vid_conwidth", vid_width.value);	
+
+		VID_Menu_CalcConTextSize(vid_conwidth.value, vid_width.value);
+		con_size = 1;
 	}
 	else
 	{
-		i+=dir;
-		if (i>=vid_menu_nummodes)
+		for (i=0;i<vid_menu_nummodes;i++)
+		{
+			if (vid_menu_modes[i].width == vid_width_window.value && vid_menu_modes[i].height == vid_height_window.value)
+				break;
+		}
+
+		if (i==vid_menu_nummodes) //can't find it in list, so it must be a custom windowed res
+		{
 			i = 0;
-		else if (i<0)
-			i = vid_menu_nummodes-1;
+		}
+		else
+		{
+			i+=dir;
+			if (i>=vid_menu_nummodes)
+				i = 0;
+			else if (i<0)
+				i = vid_menu_nummodes-1;
+		}
+
+		Cvar_SetValue ("vid_width_window",(float)vid_menu_modes[i].width);
+		Cvar_SetValue ("vid_height_window",(float)vid_menu_modes[i].height);
+
+		if (vid_conwidth.value > vid_width_window.value)
+			Cvar_SetValue ("vid_conwidth", vid_width_window.value);	
+
+		VID_Menu_CalcConTextSize(vid_conwidth.value, vid_width_window.value);
+		con_size = 1;
 	}
-
-	Cvar_SetValue ("vid_width",(float)vid_menu_modes[i].width);
-	Cvar_SetValue ("vid_height",(float)vid_menu_modes[i].height);
-	VID_Menu_RebuildRateList ();
-//	VID_Menu_CalcAspectRatio();
-	if (vid_conwidth.value > vid_width.value)
-		Cvar_SetValue ("vid_conwidth", vid_width.value);	
-
-	VID_Menu_CalcConTextSize(vid_conwidth.value, vid_width.value);
-	con_size = 1;
 }
 
 /*
@@ -2861,12 +2939,14 @@ void VID_MenuKey (int key)
 	switch (key)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:	
 		VID_SyncCvars (); 
 		S_LocalSound ("misc/menu1.wav");
 		M_Menu_Options_f ();
 		break;
 
 	case K_UPARROW:
+	case K_MWHEELUP:
 		S_LocalSound ("misc/menu1.wav");
 		video_options_cursor--;
 		if (video_options_cursor < 0)
@@ -2874,6 +2954,7 @@ void VID_MenuKey (int key)
 		break;
 
 	case K_DOWNARROW:
+	case K_MWHEELDOWN:
 		S_LocalSound ("misc/menu1.wav");
 		video_options_cursor++;
 		if (video_options_cursor >= VIDEO_OPTIONS_ITEMS)
@@ -2947,6 +3028,7 @@ void VID_MenuKey (int key)
 		break;
 
 	case K_ENTER:
+	case K_MOUSE1:
 		m_entersound = true;
 		switch (video_options_cursor)
 		{
@@ -3006,7 +3088,10 @@ void VID_MenuDraw (void)
 
 	// options
 	M_Print (16, video_cursor_table[i], "            Video Mode");
-	M_Print (216, video_cursor_table[i], va("%ix%i", (int)vid_width.value, (int)vid_height.value));
+	if (vid_fullscreen.value)
+		M_Print (216, video_cursor_table[i], va("%ix%i", (int)vid_width.value, (int)vid_height.value));
+	else
+		M_Print (216, video_cursor_table[i], va("%ix%i", (int)vid_width_window.value, (int)vid_height_window.value));
 	i++;
 
 	M_Print (16, video_cursor_table[i], "                V-Sync");

@@ -75,12 +75,12 @@ cvar_t	show_locname= {"show_locname","0"};
 cvar_t	cl_rollspeed = {"cl_rollspeed", "200"};
 cvar_t	cl_rollangle = {"cl_rollangle", "2.0"};
 cvar_t	cl_gun_offset = {"cl_gun_offset","0", true};
-cvar_t	cl_gun_drift = {"cl_gun_drift","0.2", true};
+cvar_t	cl_gun_drift = {"cl_gun_drift","0.0", true};
 cvar_t	cl_gun_idle_movement = {"cl_gun_idle_movement","0", true};
 
 cvar_t	cl_viewbob	= {"cl_bob_pov","0", false};
 cvar_t	cl_bob		= {"cl_bob","0.02", false};
-cvar_t	cl_bobcycle = {"cl_bobcycle","0.6", false};
+cvar_t	cl_bobcycle	= {"cl_bobcycle","0.6", false};
 cvar_t	cl_bobup	= {"cl_bobup","0.5", false};
 cvar_t	cl_bobfall	= {"cl_bobfall","0", true};
 cvar_t	cl_bobfall_scale = {"cl_bobfall_scale","2",true};
@@ -111,6 +111,8 @@ cvar_t	v_quadcshift	= {"v_quadcshift", "1"};
 cvar_t	v_suitcshift	= {"v_suitcshift", "1"};
 cvar_t	v_ringcshift	= {"v_ringcshift", "1"};
 cvar_t	v_pentcshift	= {"v_pentcshift", "1"};
+
+cvar_t	r_viewmodel_quake = {"r_viewmodel_quake", "1"};
 
 #ifdef GLQUAKE
 cvar_t	v_dlightcshift = {"v_dlightcshift", "1"};
@@ -291,7 +293,8 @@ cshift_t	cshift_lava = {{255, 80, 0}, 150};
 #ifdef	GLQUAKE
 
 cvar_t		gl_cshiftpercent	= {"gl_cshiftpercent", "100"};
-//cvar_t		gl_hwblend			= {"gl_hwblend", "0"};
+cvar_t		gl_hwblend			= {"gl_hwblend", "0"};
+float		old_hwblend;
 float		v_blend[4];		// rgba 0.0 - 1.0
 cvar_t		v_gamma				= {"gl_gamma", "0.85", true};
 cvar_t		v_contrast			= {"gl_contrast", "2", true};
@@ -356,7 +359,6 @@ V_ParseDamage
 ===============
 */
 extern cvar_t	gl_hurtblur;
-extern int		cl_hurtblur;//R00k
 
 float	/*damagetime = 0,*/ damagecount;
 
@@ -391,10 +393,7 @@ void V_ParseDamage (void)
 	}
 
 	cl.cshifts[CSHIFT_DAMAGE].percent += 3*damagecount;
-	if (cl.cshifts[CSHIFT_DAMAGE].percent < 0)
-		cl.cshifts[CSHIFT_DAMAGE].percent = 0;
-	if (cl.cshifts[CSHIFT_DAMAGE].percent > 150)
-		cl.cshifts[CSHIFT_DAMAGE].percent = 150;
+	cl.cshifts[CSHIFT_DAMAGE].percent = bound(0, cl.cshifts[CSHIFT_DAMAGE].percent, 150);
 
 	fraction = bound(0, v_damagecshift.value, 1);
 	cl.cshifts[CSHIFT_DAMAGE].percent *= fraction;
@@ -533,9 +532,9 @@ Fog in liquids, from FuhQuake
 void V_AddWaterfog (int contents)
 {
 	float	*colors;
-	float	lava[4] = {1.0f, 0.314f, 0.0f, 1};
-	float	slime[4] = {0.039f, 0.738f, 0.333f, 1};
-	float	water[4] = {0.05f, 0.05f, 0.030f, 1};
+	float	lava[4] = {1.0f, 0.314f, 0.0f, 0.5f};
+	float	slime[4] = {0.039f, 0.738f, 0.333f, 0.5f};
+	float	water[4] = {0.039f, 0.584f, 0.888f, 0.5f};
 
 	if (!gl_waterfog.value || contents == CONTENTS_EMPTY || contents == CONTENTS_SOLID)
 	{
@@ -654,13 +653,13 @@ void V_CalcBlend (void)
 		V_CalcPowerupCshift ();
 	}
 
-		// drop the damage value
-	cl.cshifts[CSHIFT_DAMAGE].percent -= (cl.time - cl.oldtime) * 150;//MH 
+	// drop the damage value
+	cl.cshifts[CSHIFT_DAMAGE].percent -= host_frametime * 150;
 	if (cl.cshifts[CSHIFT_DAMAGE].percent <= 0)
 		cl.cshifts[CSHIFT_DAMAGE].percent = 0;
 
 	// drop the bonus value
-	cl.cshifts[CSHIFT_BONUS].percent -= (cl.time - cl.oldtime) * 100;//MH
+	cl.cshifts[CSHIFT_BONUS].percent -= host_frametime * 100;
 	if (cl.cshifts[CSHIFT_BONUS].percent <= 0)
 		cl.cshifts[CSHIFT_BONUS].percent = 0;
 
@@ -722,10 +721,10 @@ V_UpdatePalette
 void V_UpdatePalette (void)
 {
 	int				i, j, c;
-	qboolean		new;
+	qboolean	new;
 	static float	prev_blend[4];
-	float			a, rgb[3], gamma, contrast;
-	static float	old_gamma, old_contrast;//, old_hwblend;
+	float		a, rgb[3], gamma, contrast;
+	static float	old_gamma, old_contrast;// , old_hwblend;
 	extern float	vid_gamma;
 
 	new = false;
@@ -755,20 +754,19 @@ void V_UpdatePalette (void)
 		new = true;
 	}
 
-/*	R00k: removed these as gl_hwblend seems useless...
 	if (gl_hwblend.value != old_hwblend)
 	{
 		new = true;
 		old_hwblend = gl_hwblend.value;
 	}
-*/
+
 	if (!new)
 		return;
 
 	a = v_blend[3];
 
-//	if (!vid_hwgamma_enabled || !gl_hwblend.value)
-//		a = 0;
+	if (!vid_hwgamma_enabled/* || !gl_hwblend.value*/)
+		a = 0;
 
 	rgb[0] = 255 * v_blend[0] * a;
 	rgb[1] = 255 * v_blend[1] * a;
@@ -796,7 +794,6 @@ void V_UpdatePalette (void)
 			ramps[j][i] = c << 8;
 		}
 	}
-
 	VID_SetDeviceGammaRamp ((unsigned short *)ramps);
 }
 #else	// !GLQUAKE
@@ -951,6 +948,7 @@ void CalcGunAngle (void)
 		cl.viewent.angles[PITCH] -= v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value;
 		cl.viewent.angles[YAW] -= v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value;
 	}
+
 }
 
 /*
@@ -1211,17 +1209,19 @@ void V_AddViewWeapon (float bob)
 	}
 
 	// fudge position around to keep amount of weapon visible roughly equal with different FOV
-//R00k: removed this. The player can use r_drawviewmodelsize instead, or cl_gun_fovscale 1 to make it automatic.
-/*
-	if (scr_viewsize.value == 110)
-		view->origin[2] += 1;
-	else if (scr_viewsize.value == 100)
-		view->origin[2] += 2;
-	else if (scr_viewsize.value == 90)
-		view->origin[2] += 1;
-	else if (scr_viewsize.value == 80)
-		view->origin[2] += 0.5;
-*/
+	
+	if (r_viewmodel_quake.value)
+	{
+		if (scr_viewsize.value == 110)
+			view->origin[2] += 1;
+		else if (scr_viewsize.value == 100)
+			view->origin[2] += 2;
+		else if (scr_viewsize.value == 90)
+			view->origin[2] += 1;
+		else if (scr_viewsize.value == 80)
+			view->origin[2] += 0.5;
+	}
+
 	if (cl_gun_drift.value)
 		View_ModelDrift(view->origin,view->angles,vOldAngles);
 
@@ -1264,9 +1264,7 @@ V_CalcRefdefz
 void V_CalcRefdef (void)
 {
 	entity_t		*ent, *view;
-	vec3_t			forward;
 	float			bob;
-	extern	float	punchangle;
 
 	V_DriftPitch ();
 
@@ -1308,26 +1306,19 @@ void V_CalcRefdef (void)
 
 	// add view height
 	r_refdef.vieworg[2] += cl.viewheight + (bound (-7, v_viewheight.value, 4));	// normal view height
+	r_refdef.vieworg[2] += cl.crouch;
 	
 	if (cl_viewbob.value)
 		r_refdef.vieworg[2] += bob;
 
-	r_refdef.vieworg[2] += cl.crouch;
 
 	// set up refresh view angles	
 	VectorCopy (cl.lerpangles, r_refdef.viewangles); // JPG - viewangles -> lerpangles
 	V_CalcViewRoll ();
 	V_AddIdle ();
 
-	if (v_gunkick.value)//R00k from eZQuake
-	{
-		// add weapon kick offset
-		AngleVectors (r_refdef.viewangles, forward, NULL, NULL);
-		VectorMA (r_refdef.vieworg, punchangle, forward, r_refdef.vieworg);
-
-		// add weapon kick angle
-		r_refdef.viewangles[PITCH] += punchangle * 0.5;
-	}
+	if (v_gunkick.value)	// joe	-- ANTI JARRING!!!
+		VectorAdd (r_refdef.viewangles, cl.punchangle, r_refdef.viewangles);
 
 	if (cl.stats[STAT_HEALTH] <= 0)
 		r_refdef.viewangles[ROLL] = 80;	// dead view angle
@@ -1380,13 +1371,13 @@ SCR_DrawFPS
 */
 void SCR_DrawFPS (void)
 {
-	int		x, y;
+	int	x, y;
 	char	str[80];
 	float	t;
 	
 	static	float	lastfps;
 	static	double	lastframetime;
-	extern	int		fps_count;
+	extern	int	fps_count;
 
 	if (!show_fps.value)
 		return;
@@ -1395,6 +1386,7 @@ void SCR_DrawFPS (void)
 		return;
 
 	t = Sys_DoubleTime ();
+
 	if ((t - lastframetime) >= 1.0)
 	{
 		lastfps = fps_count / (t - lastframetime);
@@ -1864,7 +1856,7 @@ void V_Init (void)
 	Cvar_RegisterVariable (&v_kickroll);
 	Cvar_RegisterVariable (&v_kickpitch);		
 	Cvar_RegisterVariable (&v_gunkick);
-
+	Cvar_RegisterVariable (&r_viewmodel_quake);
 
 	Cvar_RegisterVariable (&v_bonusflash);
 	Cvar_RegisterVariable (&v_contentblend);
@@ -1876,7 +1868,7 @@ void V_Init (void)
 #ifdef GLQUAKE
 	Cvar_RegisterVariable (&v_dlightcshift);
 	Cvar_RegisterVariable (&gl_cshiftpercent);
-//	Cvar_RegisterVariable (&gl_hwblend);
+	Cvar_RegisterVariable (&gl_hwblend);
 #endif
 
 	Cvar_RegisterVariable (&v_gamma);

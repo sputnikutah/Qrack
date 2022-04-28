@@ -54,34 +54,6 @@ Cvars are restricted from having the same names as commands to keep this
 interface from being ambiguous.
 */
 
-
-/*
-// cvar flags
-#define	CVAR_NONE			0
-#define CVAR_ARCHIVE		1
-#define CVAR_USERINFO		2       // mirrored to userinfo
-#define CVAR_SERVERINFO		4		// mirrored to serverinfo
-#define CVAR_ROM			8		// read only
-#define CVAR_INIT			16		// can only be set during initialization
-#define	CVAR_DYNAMIC		32		// allocated on heap, not static, (cleared on new map load)
-#define	CVAR_USER_ARCHIVE	64		// created by a seta command
-#define CVAR_TEMP			128		// created during initial config.cfg loading
-
-typedef struct cvar_s
-{
-	char		*name;
-	char		*string;
-	int			flags;
-	char		*description;
-	qboolean	(*OnChange)(struct cvar_s *var, char *value);
-	int			integer;		//No more type casting.
-	float		value;
-	char		*defaultvalue;
-	struct		cvar_s *next;
-} 
-cvar_t;
-*/
-
 typedef struct cvar_s
 {
 	char	*name;

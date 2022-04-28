@@ -389,7 +389,7 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 		SV_UnlinkEdict (ent);	// unlink from old position
 		
 	if (ent == sv.edicts)
-		return;		// don't add the world
+		return;			// don't add the world
 
 	if (ent->free)
 		return;
@@ -652,7 +652,6 @@ loc0:
 		{
 			trace->fraction = midf;
 			VectorCopy (mid, trace->endpos);
-			Con_DPrintf (1,"backup past 0\n");
 			return false;
 		}
 		midf = p1f + (p2f - p1f)*frac;

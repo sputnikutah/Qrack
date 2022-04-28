@@ -135,6 +135,35 @@ typedef struct gl_matrix_s
 
 extern	gl_matrix_t	r_world_matrix;
 
+//====================================================
+void GL_RegisterVerts (int numverts);
+
+// vertex arrays interface
+#define VA_TEXTURE0			0
+#define VA_TEXTURE1			1
+#define VA_TEXTURE2			2
+#define VA_TEXTURE3			3
+
+void vaBegin (GLenum PRIMITIVE_TYPE);
+void vaEnd (void);
+void vaDrawArrays (void);//R00k, added MH's wrapper
+void vaVertex2f (float v1, float v2);
+void vaVertex3f (float v1, float v2, float v3);
+void vaVertex3fv (float *v);
+void vaTexCoord2f (float st1, float st2);
+void vaTexCoord2fv (float *st);
+void vaTexCoord3f (float st1, float st2, float st3);
+void vaMultiTexCoord2f (int st_array, float st1, float st2);
+void vaColor3f (float c1, float c2, float c3);
+void vaColor4f (float c1, float c2, float c3, float c4);
+void vaColor4fv (float *c);
+
+void vaDisableTexCoordArray (GLenum VA_TMU);
+void vaEnableTexCoordArray (GLenum VA_TMU, int VA_STARRAY, int numST);
+void vaEnableColorArray (int numcolours);
+void vaEnableVertexArray (int numverts);
+void vaDisableArrays (void);
+
 // frustum culling
 #define FRUSTUM_OUTSIDE			0
 #define FRUSTUM_INSIDE			1
@@ -309,6 +338,8 @@ extern int gl_textureunits;
 void GL_DisableMultitexture (void);
 void GL_EnableMultitexture (void);
 
+void Fog_FogCommand_f (void);
+
 // vid_common_gl.c
 void Check_Gamma (unsigned char *pal);
 void VID_SetPalette (unsigned char *palette);
@@ -386,12 +417,13 @@ void GL_BuildLightmaps (void);
 
 // gl_rmisc
 void R_InitOtherTextures (void);
+void Fog_ParseWorldspawn (void);
 
 void Mod_LoadQ3Model(model_t *mod, void *buffer);
 void R_DrawQ3Model(entity_t *e);
 //void R_Q3DamageDraw (void);
 
-//extern cvar_t	gl_hwblend;
+extern cvar_t	gl_hwblend;
 
 void CheckDecals (void);
 extern int decals_enabled;
@@ -414,11 +446,13 @@ extern cvar_t gl_decal_viewdistance;
 
 void R_SpawnDecalStatic(vec3_t org, int tex, int size);
 void R_SpawnDecal(vec3_t center, vec3_t normal, vec3_t tangent, int tex, int size, float dtime, float dalpha);
-#define ISDEAD(i) ((i) >= 41 && (i) <= 102)
+//#define ISDEAD(i) ((i) >= 41 && (i) <= 102)
 
 //R00k: This is a crude FIRST attempt at a realtime server list.
 #define SERVERLIST_URL "http://quakeone.com/qrack/"
 #define SERVERLIST_FILE "servers.txt"
+
+extern float	map_fallbackalpha; //spike
 
 //New stuff from RMQengine	--TESTING--
 

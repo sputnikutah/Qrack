@@ -51,7 +51,7 @@ kbutton_t	in_lookup, in_lookdown, in_moveleft, in_moveright;
 kbutton_t	in_strafe, in_speed, in_use, in_jump, in_attack;
 kbutton_t	in_up, in_down;
 
-extern cvar_t cl_basespeedkey;
+
 
 int			in_impulse, last_impulse;
 
@@ -182,7 +182,8 @@ void IN_UseUp (void) {KeyUp(&in_use);}
 void IN_JumpDown (void) {KeyDown(&in_jump);}
 void IN_JumpUp (void) {KeyUp(&in_jump);}
 
-//void IN_Impulse (void) {in_impulse = Q_atoi(Cmd_Argv(1));}
+//Tonik; void IN_Impulse (void) {in_impulse = Q_atoi(Cmd_Argv(1));}
+// Tonik ...
 void IN_Impulse (void) 
 {
 	int best, i, imp;
@@ -243,6 +244,7 @@ void IN_Impulse (void)
 	}
 	last_impulse = in_impulse; //R00k added 
 }
+//... Tonik
 
 /*
 ===============
@@ -284,7 +286,7 @@ float CL_KeyState (kbutton_t *key)
 cvar_t	cl_upspeed			= {"cl_upspeed",		"200", true};		
 cvar_t	cl_forwardspeed		= {"cl_forwardspeed",	"200", true};		
 cvar_t	cl_backspeed		= {"cl_backspeed",		"200", true};		
-cvar_t	cl_sidespeed		= {"cl_sidespeed",		"200", true};	
+cvar_t	cl_sidespeed		= {"cl_sidespeed",		"350", true};	
 cvar_t	cl_movespeedkey		= {"cl_movespeedkey",	"2.0"};
 cvar_t	cl_yawspeed			= {"cl_yawspeed",		"140"};
 cvar_t	cl_pitchspeed		= {"cl_pitchspeed",		"150"};
@@ -304,15 +306,9 @@ Moves the local angle positions
 */
 void CL_AdjustAngles (void)
 {
-	float	speed, up, down, base;		
-	float frametime	= fabs(cl.ctime - cl.oldtime);
+	float speed, up, down;		
 	
-	base = (cl_basespeedkey.value ? cl_basespeedkey.value : 200);
-
-	if ((cl_forwardspeed.value > base) ^ (in_speed.state & 1))
-		speed = host_frametime * cl_anglespeedkey.value;
-	else
-		speed = host_frametime;
+	speed = (in_speed.state & 1) ? host_frametime * cl_anglespeedkey.value : host_frametime;
 
 	if (!(in_strafe.state & 1))
 	{
@@ -338,37 +334,14 @@ void CL_AdjustAngles (void)
 		
 	// JPG 1.05 - add pq_fullpitch
 	if (pq_fullpitch.value)
-	{
-		if (cl.viewangles[PITCH] > 90)
-			cl.viewangles[PITCH] = 90;
-		if (cl.viewangles[PITCH] < -90)
-			cl.viewangles[PITCH] = -90;
-	}
+		cl.viewangles[PITCH] = bound (-90, cl.viewangles[PITCH], 90);
 	else
-	{
-		if (cl.viewangles[PITCH] > 80)
-			cl.viewangles[PITCH] = 80;
-		if (cl.viewangles[PITCH] < -70)
-			cl.viewangles[PITCH] = -70;
-	}
+		cl.viewangles[PITCH] = bound (-70, cl.viewangles[PITCH], 80);
+	cl.viewangles[ROLL] = bound (-50, cl.viewangles[ROLL], 50);		
 
-	if (cl.viewangles[ROLL] > 50)
-		cl.viewangles[ROLL] = 50;
-	if (cl.viewangles[ROLL] < -50)
-		cl.viewangles[ROLL] = -50;
 }
 
-//MH. RMQe.
-void CL_RebalanceMove (usercmd_t *basecmd, usercmd_t *newcmd)//, double frametime)
-{
-	double frametime = fabs (cl.ctime - cl.oldtime);
-	// rebalance movement to 72 FPS (fixme - make this user-configurable)
-	double moveadjust = frametime * 72.0;
 
-	basecmd->forwardmove += newcmd->forwardmove * moveadjust;
-	basecmd->sidemove += newcmd->sidemove * moveadjust;
-	basecmd->upmove += newcmd->upmove * moveadjust;
-}
 /*
 ================
 CL_BaseMove
@@ -378,12 +351,8 @@ Send the intended movement message to the server
 */
 void CL_BaseMove (usercmd_t *cmd)
 {	
-	float base;
-	usercmd_t basemove;
-
-	basemove.forwardmove = 0;
-	basemove.sidemove = 0;
-	basemove.upmove = 0;
+	memset (cmd, 0, sizeof(*cmd));
+	VectorCopy(cl.viewangles, cmd->viewangles);
 
 	if (cls.signon != SIGNONS)
 		return;
@@ -413,45 +382,13 @@ void CL_BaseMove (usercmd_t *cmd)
 
 // adjust for speed key	
 
-	if ((in_speed.state & 1))//+speed
+	if (in_speed.state & 1)
 	{
-		if (cl_basespeedkey.value)//if always running, +speed becomes braking, affects strafing and vertical movement.
-		{
-			base = max (200,cl_basespeedkey.value);//median speed point
+		cmd->forwardmove *= cl_movespeedkey.value;
+		cmd->sidemove *= cl_movespeedkey.value;
+		cmd->upmove *= cl_movespeedkey.value;
 
-			if ((cl_forwardspeed.value > base))//if always run is on then -speed
-			{
-				if (!(in_klook.state & 1))
-				{	
-					base = ((cl_forwardspeed.value)/(cl_movespeedkey.value));					
-					cmd->forwardmove -= base * CL_KeyState (&in_forward);
-					cmd->forwardmove += base * CL_KeyState (&in_back);
-				}	
-				base = ((cl_sidespeed.value)/(cl_movespeedkey.value));
-				cmd->sidemove -= base * CL_KeyState (&in_moveright);
-				cmd->sidemove += base * CL_KeyState (&in_moveleft);
-				
-				base = ((cl_upspeed.value)/(cl_movespeedkey.value));
-				cmd->upmove -= base * CL_KeyState (&in_up);
-				cmd->upmove += base * CL_KeyState (&in_down);
-			}
-			else 
-			{
-				cmd->forwardmove *= cl_movespeedkey.value;
-				cmd->sidemove *= cl_movespeedkey.value;
-				cmd->upmove *= cl_movespeedkey.value;
-			}
-		}
-		else
-		{//Standard behavior (cl_basespeedkey off), +speed for sprint
-			cmd->forwardmove *= cl_movespeedkey.value;
-			cmd->sidemove *= cl_movespeedkey.value;
-			cmd->upmove *= cl_movespeedkey.value;
-		}
 	}
-	
-	if (sv.active)	
-		CL_RebalanceMove (cmd, &basemove);//, frametime);
 }
 
 // joe: support for synthetic lag, from ProQuake
@@ -511,7 +448,8 @@ void CL_SendMove (usercmd_t *cmd)
 		
 		if (realtime < cl.lastpackettime + packettime)
 		{
-			kb += 128;
+			if (developer.value)
+				kb += 128;
 			return;
 		}
 		

@@ -479,7 +479,7 @@ void M_SinglePlayer_Key (int key)
 {
 	if (m_singleplayer_confirm)
 	{
-		if (key == 'n' || key == K_ESCAPE)
+		if (key == 'n' || key == K_ESCAPE || key == K_MOUSE2)
 		{
 			m_singleplayer_confirm = false;
 			m_entersound = true;
@@ -493,6 +493,7 @@ void M_SinglePlayer_Key (int key)
 	switch (key)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		M_Menu_Main_f ();
 		break;
 
@@ -569,7 +570,7 @@ void M_ScanSaves (void)
 		if (!(f = fopen(name, "r")))
 			continue;
 		fscanf_s (f, "%i\n", &version);
-		fscanf_s (f, "%79s\n", name);
+		fscanf_s (f, "%79s\n", name,sizeof(name));
 		strncpy (m_filenames[i], name, sizeof(m_filenames[i])-1);
 
 	// change _ back to space
@@ -639,6 +640,7 @@ void M_Load_Key (int k)
 	switch (k)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		M_Menu_SinglePlayer_f ();
 		break;
 
@@ -697,6 +699,7 @@ void M_Save_Key (int k)
 	switch (k)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		M_Menu_SinglePlayer_f ();
 		break;
 
@@ -782,6 +785,7 @@ void M_MultiPlayer_Key (int key)
 	switch (key)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		M_Menu_Main_f ();
 		break;
 
@@ -922,6 +926,7 @@ void M_Setup_Key (int k)
 	switch (k)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		Q_strncpyz (setup_myname, cl_name.string, sizeof(setup_myname));//R00k
 		M_Menu_MultiPlayer_f ();
 		break;
@@ -970,10 +975,7 @@ void M_Setup_Key (int k)
 			if (setup_chi > 11)
 				setup_chi = 11;
 
-			if (OnChange_gl_crosshairimage(&gl_crosshairimage, (va("crosshair%i", setup_chi))))
-				Cbuf_AddText (va("crosshairimage crosshair%i\n", setup_chi));
-			else
-				Cbuf_AddText (va("crosshair %i\n", setup_chi));
+			Cvar_Set ("crosshairimage", va("crosshair%i", setup_chi));
 		}
 
 		if (setup_cursor == 6)
@@ -1011,10 +1013,7 @@ forward:
 			if (setup_chi > 11)
 				setup_chi = 11;
 
-			if (OnChange_gl_crosshairimage(&gl_crosshairimage, (va("crosshair%i", setup_chi))))
-				Cbuf_AddText (va("crosshairimage crosshair%i\n", setup_chi));
-			else
-				Cbuf_AddText (va("crosshair %i\n", setup_chi));
+			Cvar_Set ("crosshairimage", va("crosshair%i", setup_chi));
 		}
 		if (setup_cursor == 6)
 		{
@@ -1154,6 +1153,7 @@ void M_NameMaker_Key (int k)
 	switch (k)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		M_Menu_Setup_f ();
 		break;
 
@@ -1370,6 +1370,7 @@ again:
 	switch (k)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		M_Menu_MultiPlayer_f ();
 		break;
 
@@ -1529,6 +1530,7 @@ void M_Options_Key (int k)
 	switch (k)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		M_Menu_Main_f ();
 		break;
 
@@ -1799,7 +1801,7 @@ void M_Keys_Key (int k)
 	if (bind_grab)
 	{	// defining a key
 		S_LocalSound ("misc/menu1.wav");
-		if (k == K_ESCAPE)
+		if (k == K_ESCAPE || k == K_MOUSE2)
 		{
 			bind_grab = false;
 		}
@@ -1816,6 +1818,7 @@ void M_Keys_Key (int k)
 	switch (k)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		M_Menu_Options_f ();
 		break;
 
@@ -2020,6 +2023,7 @@ void M_VideoOptions_Key (int k)
 	switch (k)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		M_Menu_Options_f ();
 		break;
 
@@ -2126,7 +2130,7 @@ void M_VideoOptions_Key (int k)
 			Cvar_Set ("r_shadows", "0");
 			if (particle_mode)
 				R_SetParticles (0);
-			Cvar_Set ("gl_texturemode", "GL_LINEAR_MIPMAP_NEAREST");
+			Cvar_Set ("gl_texturemode", "GL_NEAREST");
 			Cvar_Set ("gl_picmip", "0");
 			Cvar_Set ("gl_caustics", "0");
 			Cvar_Set ("gl_waterfog", "0");
@@ -2145,6 +2149,7 @@ void M_VideoOptions_Key (int k)
 			Cvar_Set ("gl_externaltextures_world", "0");
 			Cvar_Set ("r_skyscroll", "0");
 			Cvar_Set ("gl_motion_blur", "0");
+			Cvar_Set ("r_drawflame", "1");
 			break;
 
 		case 18:
@@ -2172,6 +2177,7 @@ void M_VideoOptions_Key (int k)
 			Cvar_Set ("r_bloom", "1");
 			Cvar_Set ("gl_shiny", "1");
 			Cvar_Set ("gl_motion_blur", "0.333");
+			Cvar_Set ("r_drawflame", "2");
 			break;
 
 		default:
@@ -2294,6 +2300,7 @@ void M_Particles_Key (int k)
 	switch (k)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		CheckParticles ();
 		M_Menu_VideoOptions_f ();
 		break;
@@ -2697,6 +2704,7 @@ void M_Maps_Key (int k)
 	switch (k)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		if (searchbox)
 			KillSearchBox ();
 		else
@@ -2764,6 +2772,7 @@ void M_Demos_Key (int k)
 	switch (k)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		if (searchbox)
 		{
 			KillSearchBox ();
@@ -2836,6 +2845,7 @@ void M_Quit_Key (int key)
 	switch (key)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 	case 'n':
 	case 'N':
 		if (wasInMenus)
@@ -2953,6 +2963,7 @@ void M_Update_Key (int key)
 	switch (key)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		M_Menu_Main_f ();
 		break;
 
@@ -3574,6 +3585,7 @@ void M_LanConfig_Key (int key)
 	switch (key)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		M_Menu_Net_f ();
 		break;
 
@@ -4079,6 +4091,7 @@ void M_GameOptions_Key (int key)
 	switch (key)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		M_Menu_Net_f ();
 		break;
 
@@ -4271,6 +4284,7 @@ void M_FoundServers_Key (int k)
 	switch (k)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		M_Menu_LanConfig_f ();
 		break;
 
@@ -4629,6 +4643,7 @@ void M_STest_Key (int key)
 	switch (key)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
 		m_state = m_slist;
 		M_Menu_ServerList_f ();
 		break;
@@ -4664,8 +4679,7 @@ int M_Menu_UpdateServerList (void)
 	success = Web_Get( url, NULL, va("%s/qrack/servers.txt", com_basedir), false, 2, 2, NULL );
 
 	if( !success )
-	{
-		Con_Printf("No Response From Master Server\n");
+	{		
 		return 0;
 	}
 	else
@@ -4728,6 +4742,8 @@ void M_ServerList_Key (key)
 	switch (key)
 	{
 	case K_ESCAPE:
+	case K_MOUSE2:
+		SList_Shutdown();
 		M_Menu_MultiPlayer_f ();
 		break;
 
@@ -4840,7 +4856,7 @@ void M_ServerList_Key (key)
 			{
 				memmove (&slist[slist_cursor], &slist[slist_cursor+1], (slist_length - slist_cursor - 1) * sizeof(slist[0]));
 				SList_Reset_NoFree (slist_length - 1);
-			}
+			}			
 		}
 		break;
 	}

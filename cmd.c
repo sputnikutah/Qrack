@@ -64,6 +64,12 @@ void Cmd_Wait_f (void)
 	cmd_wait = true;
 }
 
+//Spike: for renderer/server isolation
+void Cbuf_Waited(void)
+{
+	cmd_wait = false;
+}
+
 /*
 =============================================================================
 
@@ -403,7 +409,14 @@ void Cmd_Alias_f (void)
 	char		*s,*n;
 
 	if (cls.demoplayback)//R00k dont stuff alias commands when watching a demo.
-		return;
+	{
+		if (strcmp(Cmd_Argv(1),""))
+		{
+			Con_SafePrintf ("\x02Warning: ");
+			Con_Printf ("Ingoring alias command '%s' during demo playback.\n", Cmd_Argv(1));
+			return;
+		}
+	}
 
 	switch (Cmd_Argc())
 	{
@@ -419,7 +432,8 @@ void Cmd_Alias_f (void)
 		n = Cmd_Argv(1);
 		for (a = cmd_alias ; a ; a=a->next)
 			if (!strcmp(Cmd_Argv(1), a->name))//R00k empty definition argument edits the current value
-			{			
+			{	
+				Con_Printf ("* Use unalias %s to clear\n", Cmd_Argv(1));
 				sprintf (n,"alias %s \"%s",a->name, a->value);
 
 				strcpy (key_lines[edit_line]+1, n);
@@ -2189,17 +2203,20 @@ void Cmd_Servers_f (void)
 	qboolean success;
 	FILE *f;
 	extern int Web_Get( const char *url, const char *referer, const char *name, int resume, int max_downloading_time, int timeout, int ( *_progress )(double) );
-	extern char *Con_Quakebar (int len);
+	
 	char buf[128] = {0};
 //	char name[32] = {0};
-	
-	Q_snprintfz( url, sizeof( url ), "%s%s", SERVERLIST_URL, SERVERLIST_FILE );
-	success = Web_Get( url, NULL, va("%s/qrack/servers.txt", com_basedir), false, 2, 2, NULL );
 
-	if( !success )
+	if (!(f = fopen(va("%s/qrack/servers.txt",com_basedir), "rt")))
 	{
-		Con_Printf ("WARNING: No response from 'servers.quakeone.com'\n");
-		return;
+		Q_snprintfz( url, sizeof( url ), "%s%s", SERVERLIST_URL, SERVERLIST_FILE );
+		success = Web_Get( url, NULL, va("%s/qrack/servers.txt", com_basedir), false, 2, 2, NULL );
+		
+		if( !success )
+		{
+			Con_Printf ("WARNING: No response from 'servers.quakeone.com'\n");
+			return;
+		}
 	}
 
 	Q_strncpyz (buf, va("%s/qrack/servers.txt", com_basedir), sizeof(buf));
@@ -2210,7 +2227,6 @@ void Cmd_Servers_f (void)
 		return;
 	}
 
-	Con_Printf ("reading : servers.quakeone.com\n");
 	
 	Con_Printf ("žžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžŸ\n");
 	
@@ -2247,7 +2263,93 @@ void Cmd_PrintLoc_f (void)
 	Con_Printf ("angle :%s\n",ang);
 }
 
+/*
+============
+Cvar_FindVar
+============
+*/
+cvar_t *Cvar_FindVarAfter (char *prev_name)//, unsigned int with_flags)
+{
+	cvar_t	*var;
 
+	if (*prev_name)
+	{
+		var = Cvar_FindVar (prev_name);
+		if (!var)
+			return NULL;
+		var = var->next;
+	}
+	else
+		var = cvar_vars;
+
+	// search for the next cvar matching the needed flags
+/*	while (var)
+	{
+		if ((var->flags & with_flags) || !with_flags)
+			break;
+		var = var->next;
+	}
+*/
+	return var;
+}
+
+static char *Cmd_TintSubstring(const char *in, const char *substr, char *out, size_t outsize)//from QuakeSpasmSpiked
+{
+	int l;
+	char *m;
+	
+	strlcpy(out, in, outsize);
+	
+	while ((m = q_strcasestr(out, substr)))
+	{
+		l = strlen(substr);
+		while (l-->0)
+			if (*m >= ' ' && *m < 127)
+				*m++ |= 0x80;
+	}
+	return out;
+}
+
+/*
+============
+Cmd_Apropos_f by Spike
+
+scans through each command and cvar names+descriptions for the given substring
+we don't support descriptions, so this isn't really all that useful, but even without the sake of consistency it still combines cvars+commands under a single command.
+============
+*/
+void Cmd_Apropos_f(void)
+{	
+	char tmpbuf[256];
+	int hits = 0;
+	cmd_function_t	*cmd;
+	cvar_t *var;
+	const char *substr = Cmd_Argv (1);
+	if (!*substr)
+	{
+		Con_SafePrintf ("%s <substring> : search through commands and cvars for the given substring\n", Cmd_Argv(0));
+		return;
+	}
+	for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
+	{
+		if (q_strcasestr(cmd->name, substr) && cmd_source != src_command)
+		{
+			hits++;
+			Con_SafePrintf ("%s\n", Cmd_TintSubstring(cmd->name, substr, tmpbuf, sizeof(tmpbuf)));
+		}
+	}
+
+	for (var=Cvar_FindVarAfter("") ; var ; var=var->next)
+	{
+		if (q_strcasestr(var->name, substr))
+		{
+			hits++;
+			Con_SafePrintf ("%s\n current value: %s default value: %s\n", Cmd_TintSubstring(var->name, substr, tmpbuf, sizeof(tmpbuf)), var->string, var->defaultvalue);
+		}
+	}
+	if (!hits)
+		Con_SafePrintf ("no cvars nor commands contain that substring\n");
+}
 /*
 ============
 Cmd_Init
@@ -2274,4 +2376,5 @@ void Cmd_Init (void)
 	Cmd_AddCommand ("describe", Cmd_Describe_f);
 	Cmd_AddCommand ("spot", Cmd_PrintLoc_f);//R00k
 	Cmd_AddCommand ("servers",Cmd_Servers_f);//R00k
+	Cmd_AddCommand ("find", Cmd_Apropos_f);//Spike
 }

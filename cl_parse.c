@@ -160,7 +160,7 @@ void CL_ParseStartSoundPacket (void)
 	//johnfitz
 
 	if (ent > cl_max_edicts) //johnfitz -- no more MAX_EDICTS
-		Host_Error ("CL_ParseStartSoundPacket: ent = %i", ent);
+		Host_Error ("CL_ParseStartSoundPacket: cl_max_edicts exceeded @ ent = %i", ent);
 
 	for (i=0 ; i<3 ; i++)
 		pos[i] = MSG_ReadCoord ();
@@ -345,7 +345,6 @@ void CL_ParseServerInfo (void)
 	extern cvar_t cl_levelshots;
 	extern cvar_t scr_centerprint_levelname;
 	extern char		con_lastcenterstring[1024]; //johnfitz
-//	qboolean success = false;
 
 	Con_DPrintf (1,"Serverinfo packet received.\n");
 
@@ -679,17 +678,14 @@ void CL_ParseServerInfo (void)
 	for (i=1 ; i<numsounds ; i++)
 	{
 		cl.sound_precache[i] = S_PrecacheSound (sound_precache[i]);
-/*FIXME
+
 		if (!cl.sound_precache[i])
 		{
 			if (!cls.demoplayback && cl_web_download.value && cl_web_download_url.string)
 			{				
-				success = CL_WebDownload(sound_precache[i]);
-
-				if (success)
+				if (CL_WebDownload(sound_precache[i]))
 				{
 					i--;
-					success = false;
 				}
 			}
 			else
@@ -698,20 +694,31 @@ void CL_ParseServerInfo (void)
 				return;
 			}
 		}
-*/
 		CL_KeepaliveMessage ();
 	}
-
-
 
 	// local state
 	cl_entities[0].model = cl.worldmodel = cl.model_precache[1];
 
 	if (cl.worldmodel)//If a download fails then dont init the map.
 	{
-		//PROQUAKE --Start
-		LOC_LoadLocations();	// JPG - read in the location data for the new map
-		//PROQUAKE --End
+		char	filename[MAX_OSPATH];
+		
+		if (LOC_LoadLocations()== false)	// JPG - read in the location data for the new map
+		{
+			if ((!cls.demoplayback) && (cl_web_download.value) && (cl_web_download_url.string) && (!sv.active))
+			{
+				CL_KeepaliveMessage();
+				Q_snprintfz (filename, sizeof(filename), "locs/%s", sv_mapname.string);
+				COM_ForceExtension (filename, ".loc");
+
+				if (CL_WebDownload(filename))//try to download the locfile if we dont have it locally
+				{
+					CL_KeepaliveMessage();
+					LOC_LoadLocations();
+				}
+			}
+		}
 
 		R_NewMap ();
 		//johnfitz -- clear out string; we don't consider identical
@@ -820,8 +827,8 @@ void CL_ParseUpdate (int bits)
 
 	if ((i > 0 && i <= cl.maxclients) && (ent->model) && (ent->model->modhint == MOD_PLAYER))
 	{
-		ent->shirtcolor = (cl.scores[i - 1].colors & 0xf0) >> 4;
-		ent->pantscolor = (cl.scores[i - 1].colors & 15);
+		ent->shirtcolor = (cl.scores[i - 1].colors & 0xf0) >> 4;//R00k
+		ent->pantscolor = (cl.scores[i - 1].colors & 15);		//R00k
 		ent->colormap = i;
 	}
 	else
@@ -927,9 +934,6 @@ void CL_ParseUpdate (int bits)
 	// or randomized
 		if (model)
 		{
-			if (ent->effects & EF_DIMLIGHT)
-				ent->model->flags = (ent->model->flags | EF_FULLBRIGHT);
-
 			if (model->synctype == ST_RAND)
 				ent->syncbase = (float)(rand()&0x7fff) / 0x7fff;
 			else
@@ -1209,7 +1213,6 @@ int MSG_ReadShortPQ (void)
 }
 
 qboolean cl_mm2;//R00k added for cl_mute
-
 /* JPG - added this function for ProQuake messages
 =======================
 CL_ParseProQuakeMessage
@@ -1234,6 +1237,7 @@ void CL_ParseProQuakeMessage (void)
 		shirt = MSG_ReadByte() - 16;
 		cl.teamgame = true;
 		cl.teamscores[team].colors = 16 * shirt + team;
+		cl.teamscores[team].frags = 0;
 		//Con_Printf("pqc_new_team %d %d\n", team, shirt);
 		break;
 
@@ -1249,6 +1253,7 @@ void CL_ParseProQuakeMessage (void)
 
 	case pqc_team_frags:
 		Sbar_Changed ();
+		cl.teamgame = true;
 		team = MSG_ReadByte() - 16;
 		if (team < 0 || team > 15)
 			Host_Error ("CL_ParseProQuakeMessage: pqc_team_frags invalid team");
@@ -1259,16 +1264,18 @@ void CL_ParseProQuakeMessage (void)
 		//Con_DPrintf (1,"pqc_team_frags %d %d\n", team, frags);
 	break;			
 
-	case pqc_match_time:
+	case pqc_match_time:		
 		Sbar_Changed ();
+		cl.teamgame = true;
 		cl.minutes = MSG_ReadBytePQ();
 		cl.seconds = MSG_ReadBytePQ();
-		cl.last_match_time = cl.time;
+		cl.last_match_time = cl.ctime;//R00k: fixed for cl_demorewind
 		//Con_Printf("pqc_match_time %d %d\n", cl.minutes, cl.seconds);
 		break;
 
 	case pqc_match_reset:
 		Sbar_Changed ();
+		cl.teamgame = true;
 		for (i = 0 ; i < 14 ; i++)
 		{
 			cl.teamscores[i].colors = 0;
@@ -1359,13 +1366,14 @@ void Q_Version(char *s)
 		{
 			if ((qv_time > 0) && (qv_time > realtime))
 			{
+				Con_Printf ("q_version spam active; try again in %02.0f seconds.\n",(qv_time - realtime));
 				return;
 			}
 
 			if (cl_mm2)
-				Cbuf_AddText (va("say_team Qrack version %s\n", VersionString()));
+				Cbuf_AddText (va("say_team Qrack %s\n", VersionString()));
 			else
-				Cbuf_AddText (va("say Qrack version %s\n", VersionString()));
+				Cbuf_AddText (va("say Qrack %s\n", VersionString()));
 
 			Cbuf_Execute ();
 			qv_time = realtime + 20;		
@@ -1375,6 +1383,7 @@ void Q_Version(char *s)
 		{
 			if ((qi_time > 0) && (qi_time > realtime))
 			{
+				Con_Printf ("q_sysinfo spam active; try again in %02.0f seconds.\n",(qv_time - realtime));
 				return;
 			}
 
@@ -1485,7 +1494,7 @@ void CL_ParseString (char *string)
 	{
 		if (!strcmp(string, "Match paused\n"))
 		{
-			//TODO:R00k add a pause for demo if recording...
+			//TODO:R00k add a pause for demo if recording...(SVC_SETPAUSE ?)
 			cl.match_pause_time = cl.time;	
 		}
 		else
@@ -1782,7 +1791,7 @@ void CL_ParseServerMessage (void)
 			if (i >= MAX_LIGHTSTYLES)
 			{
 				if (i <= 256)				//	R00k: I had MAX_LIGHTSTYLES set to 256 for Halflife map support. I dont really see a need for those maps beyond novelty. 
-					MSG_ReadString();		//			Though, old demos were recorded with up to 256 lightstyle. So, now i have to just read past them so engine doesnt complain.
+					MSG_ReadString();		//			Though, old demos were recorded with up to 256 lightstyles. So, now i have to just read past them so engine doesnt complain.
 				else
 				Sys_Error ("svc_lightstyle > MAX_LIGHTSTYLES");
 			}
@@ -1807,7 +1816,7 @@ void CL_ParseServerMessage (void)
 			i = MSG_ReadByte ();
 
 			if (i >= cl.maxclients)
-				Host_Error ("CL_ParseServerMessage: svc_updatename > maxclients");//R00k changed to be more legible.
+				Host_Error (va("CL_ParseServerMessage: svc_updatename (%i) > maxclients (%i)"),i,cl.maxclients);//R00k changed to be more legible.
 
 			Q_strncpyz (cl.scores[i].name, MSG_ReadString(), sizeof(cl.scores[i].name));
 			break;

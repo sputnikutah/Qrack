@@ -36,7 +36,7 @@ extern	cvar_t	gl_subdivide_size;
 extern	cvar_t	gl_textureless;
 extern	byte *StringToRGB (char *s);
 
-extern	cvar_t	gl_fogenable, gl_fogdensity, gl_fogred, gl_foggreen, gl_fogblue, gl_fogsky;
+extern	cvar_t	gl_fogenable, gl_fogdensity, gl_fogred, gl_foggreen, gl_fogblue;
 extern	cvar_t	r_skyspeed;
 /*
 =====================================================================================
@@ -137,7 +137,8 @@ void SubdividePolygon (int numverts, float *verts)
 		return;
 	}
 
-	poly = Hunk_AllocName (sizeof(glpoly_t) + (numverts - 4) * VERTEXSIZE * sizeof(float),"glpoly_t");
+//	poly = Hunk_AllocName (sizeof(glpoly_t) + (numverts - 4) * VERTEXSIZE * sizeof(float),"glpoly_t");
+	poly = MallocZ(sizeof(glpoly_t) + (numverts - 4) * VERTEXSIZE * sizeof(float));
 	poly->next = warpface->polys;
 	warpface->polys = poly;
 	poly->numverts = numverts;
@@ -145,22 +146,29 @@ void SubdividePolygon (int numverts, float *verts)
 
 	for (i = 0 ; i < numverts ; i++, verts += 3)
 	{
-	  VectorCopy (verts, poly->verts[i]);
-	  s = DotProduct (verts, warpface->texinfo->vecs[0]);
-	  t = DotProduct (verts, warpface->texinfo->vecs[1]);
-	  poly->verts[i][3] = s;
-	  poly->verts[i][4] = t;
+		VectorCopy (verts, poly->verts[i]);
+		s = DotProduct (verts, warpface->texinfo->vecs[0]);
+		t = DotProduct (verts, warpface->texinfo->vecs[1]);
+		// mh - speed up water rendering
+		if (subdivide_size == 64)
+		{
+			s = s / 64;
+			t = t / 64;
+		}
+		poly->verts[i][3] = s;
+		poly->verts[i][4] = t;
+		poly->verts[i][5] = 0;
 
-	  poly->midpoint[0] += poly->verts[i][0];
-	  poly->midpoint[1] += poly->verts[i][1];
-	  poly->midpoint[2] += poly->verts[i][2];
+		poly->midpoint[0] += poly->verts[i][0];
+		poly->midpoint[1] += poly->verts[i][1];
+		poly->midpoint[2] += poly->verts[i][2];
 	}
 
 	poly->midpoint[0] /= (float) numverts;
 	poly->midpoint[1] /= (float) numverts;
 	poly->midpoint[2] /= (float) numverts;
 
-	poly->fxofs = (rand () % 64) - 64; 
+	poly->fxofs = (rand () % 64) - 64; //This randomly offsets for random raindrops
 }
 
 /*
@@ -198,23 +206,34 @@ void GL_SubdivideSurface (msurface_t *fa)
 
 //=========================================================
 
-
 void EmitFlatPoly (msurface_t *fa)
 {
 	glpoly_t	*p;
 	float		*v;
 	int		i;
 	
+	if (gl_fogenable.value)
+		glEnable(GL_FOG);
+
+	vaEnableVertexArray (3);
+	vaEnableTexCoordArray (GL_TEXTURE0, VA_TEXTURE0, 2);
+	vaEnableTexCoordArray (GL_TEXTURE1, VA_TEXTURE1, 2);
+
 	for (p = fa->polys ; p ; p = p->next)
 	{
-		glBegin (GL_POLYGON);
+		vaBegin (GL_POLYGON);
 		for (i = 0, v = p->verts[0] ; i < p->numverts ; i++, v += VERTEXSIZE)
 		{
-			glTexCoord2f (0, 0);
-			glVertex3fv (v);
+			vaTexCoord2f (0,0);	//stop flickering animated textures			
+			vaVertex3fv (v);
 		}
-		glEnd ();
+		vaDrawArrays();
+		vaEnd ();
 	}
+	vaDisableArrays();
+
+	if (gl_fogenable.value)
+		glDisable(GL_FOG);
 }
 /*
 float	turbsin[] =
@@ -262,9 +281,13 @@ void EmitWaterPolys(msurface_t *fa)
 	}
 	else
 	{
+		vaEnableVertexArray (3);
+		vaEnableTexCoordArray (GL_TEXTURE0, VA_TEXTURE0, 2);
+		vaEnableTexCoordArray (GL_TEXTURE1, VA_TEXTURE1, 2);
+
 		for (p = fa->polys ; p ; p = p->next)
 		{
-			glBegin (GL_POLYGON);
+			vaBegin (GL_POLYGON);
 			for (i = 0, v = p->verts[0] ; i < p->numverts ; i++, v += VERTEXSIZE)
 			{				
 				os = v[3];//todo:cvar scale
@@ -286,13 +309,15 @@ void EmitWaterPolys(msurface_t *fa)
 				}
 
 				//glTexCoord2f (s+(sin(cl.time)/16), t+(cos(cl.time)/16));
-				glTexCoord2f (s, t);
-				
-				glVertex3fv (nv);
+				vaTexCoord2f (s, t);				
+				vaVertex3fv (nv);
 			}			 
-			glEnd ();
-		}		 
+			vaDrawArrays();
+			vaEnd ();
+		}	
+		vaDisableArrays();
 	}
+
 	if (gl_fogenable.value)
 		glDisable(GL_FOG);
 }
@@ -371,11 +396,6 @@ void R_DrawSkyChain (void)
 
 	GL_DisableMultitexture ();
 
-	if (gl_fogenable.value && gl_fogsky.value)
-	{
-		glEnable(GL_FOG);
-	}
-
 	if ((r_fastsky.value) || (gl_textureless.value))
 	{
 		GL_Bind (alphaskytexture);
@@ -427,9 +447,6 @@ void R_DrawSkyChain (void)
 			glDisable (GL_BLEND);
 		}
 	}
-
-	if (gl_fogenable.value && gl_fogsky.value)
-		glDisable(GL_FOG);
 
 	skychain = NULL;
 	skychain_tail = &skychain;
@@ -489,8 +506,8 @@ void R_DrawSkyChain2 (void)
 	if (r_skyspeed.value > 100) r_skyspeed.value = 100;
 
 	// always rotate even if we're paused!!!
-	rotateBack = anglemod (cl.time * (2.5 * r_skyspeed.value));
-	rotateFore = anglemod (cl.time * (4.0 * r_skyspeed.value));
+	rotateBack = anglemod (cl.time * (r_skyspeed.value));
+	rotateFore = anglemod (cl.time * (3 * r_skyspeed.value));
 
 	if (!skychain)
 		return;
@@ -1167,7 +1184,7 @@ void R_AddSkyBoxSurface (msurface_t *fa)
 R_ClearSkyBox
 ==============
 */
-void R_ClearSkyBox (void)
+void R_ClearSkyBox (void) 
 {
 	int	i;
 
@@ -1184,9 +1201,10 @@ void MakeSkyVec (float s, float t, int axis)
 	int		j, k, farclip;
 
 	farclip = max((int)r_farclip.value, 4096);
-	b[0] = s * (farclip >> 1);
-	b[1] = t * (farclip >> 1);
-	b[2] = (farclip >> 1);
+
+	b[0] = s *	(farclip / sqrt(3.0));
+	b[1] = t *	(farclip / sqrt(3.0));
+	b[2] =		(farclip / sqrt(3.0));
 
 	for (j=0 ; j<3 ; j++)
 	{
@@ -1234,9 +1252,11 @@ void R_DrawSkyBox (void)
 
 	GL_DisableMultitexture ();
 
-	if (gl_fogenable.value && gl_fogsky.value)
-		glDisable(GL_FOG);
-
+	if (gl_fogenable.value)
+	{
+		glDisable (GL_FOG);
+	}
+	
 	for (i=0 ; i<6 ; i++)
 	{
 		if (skymins[0][i] >= skymaxs[0][i] || skymins[1][i] >= skymaxs[1][i])
@@ -1245,6 +1265,7 @@ void R_DrawSkyBox (void)
 		GL_Bind (skyboxtextures + skytexorder[i]);
 
 		glBegin (GL_QUADS);
+
 		MakeSkyVec (skymins[0][i], skymins[1][i], i);
 		MakeSkyVec (skymins[0][i], skymaxs[1][i], i);
 		MakeSkyVec (skymaxs[0][i], skymaxs[1][i], i);
@@ -1253,45 +1274,25 @@ void R_DrawSkyBox (void)
 		glEnd ();
 	}
 
-	if (gl_fogenable.value && gl_fogsky.value) 
-	{
-		glEnable(GL_FOG);
-		glDisable(GL_TEXTURE_2D);
-		glColor4f(gl_fogred.value, gl_foggreen.value, gl_fogblue.value, 1); 
-	    glEnable(GL_BLEND);
-		glBlendFunc(GL_ONE, GL_ZERO);		
-	}
-	else 
-	{
-		glDisable(GL_TEXTURE_2D);
-		glColorMask (GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_ZERO, GL_ONE);
-	}
+	glDisable(GL_TEXTURE_2D);
+	glColorMask (GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_ZERO, GL_ONE);
 
 	for (fa = skychain ; fa ; fa = fa->texturechain)
 		EmitFlatPoly (fa);
 
-	if (gl_fogenable.value && gl_fogsky.value) 
-	{
-		glDisable(GL_BLEND);
-		glEnable(GL_TEXTURE_2D);
-	}
-	else
-	{	
-		glEnable (GL_TEXTURE_2D);
-		glColorMask (GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-		glDisable (GL_BLEND); 
-		glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); 
-		glColor3f (1, 1, 1);
-	}
-	 
+	glEnable (GL_TEXTURE_2D);
+	glColorMask (GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glDisable (GL_BLEND); 
+	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); 
+	glColor3f (1, 1, 1);
+
+	if (gl_fogenable.value)
+		glEnable (GL_FOG);	
 
 	skychain = NULL;
 	skychain_tail = &skychain;
-
-	if (gl_fogenable.value && gl_fogsky.value)
-		glDisable(GL_FOG);
 }
 
 void EmitCausticsPolys (void)
@@ -1317,8 +1318,8 @@ void EmitCausticsPolys (void)
 
 			s = os/4 + (cl.time*0.015);
 			t = ot/4 + (cl.time*0.015);
-			
-			glTexCoord2f (s+(sin(cl.time)/16), t+(cos(cl.time)/16));
+				
+			glTexCoord2f (s+(sin(cl.time)/32), t+(cos(cl.time)/32));
 			glVertex3fv (v);			
 		}
 		 
@@ -1443,6 +1444,7 @@ void EmitGlassPolys (void)
 	int			i;
 	float		*v;
 	extern	glpoly_t	*glass_polys;
+	extern GLuint r_scaleview_texture;
 
 	if (!glass_polys) return;
 

@@ -32,7 +32,7 @@ m*_t structures are in-memory
 */
  
 #define ISTURBTEX(x) ((x)[0] == '*' || (x)[0] == '!')
-#define ISSKYTEX(x) ((x)[0] == 's' && (x)[1] == 'k' && (x)[2] == 'y')
+#define ISSKYTEX(x) (((x)[0] == 's' && (x)[1] == 'k' && (x)[2] == 'y')||((x)[0] == 'S' && (x)[1] == 'K' && (x)[2] == 'Y'))
 #define ISALPHATEX(x) ((x)[0] == '{')
 
 // hacky flags to get things my way Reckless "dont read":
@@ -401,7 +401,7 @@ typedef struct
 	maliasframedesc_t	frames[1];		// variable sized
 } aliashdr_t;
 
-#define	MAXALIASVERTS	4096
+#define	MAXALIASVERTS	4096	//R00k -- was 1024
 #define	MAXALIASFRAMES	256
 #define	MAXALIASTRIS	8192	
 
@@ -691,7 +691,7 @@ typedef enum
 //#define EF_NOCOLORMAP 256
 #define EF_FULLBRIGHT 512		// R00k: flames, lavaball, lg bolt etc render in fullbright (also no shading)// need to change to Entity Flag not Model Flag...
 
-
+#define	MF_HOLEY	(1u<<14)	// MarkV/QSS -- make index 255 transparent on mdl's
 
 typedef struct model_s
 {
@@ -764,6 +764,7 @@ typedef struct model_s
 	char		*entities;
 
 	int			bspversion;
+	int			contentstransparent;	//spike -- added this so we can disable glitchy wateralpha where its not supported.
 	qboolean	isworldmodel;
 
 	// additional model data

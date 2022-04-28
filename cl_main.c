@@ -24,36 +24,36 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern int in_impulse;
 // these two are not intended to be set directly
-cvar_t	cl_name				= {"_cl_name", "player", true};
-cvar_t	cl_color			= {"_cl_color", "0", true};
-cvar_t	cl_echo_qversion	= {"cl_echo_qversion", "1", true};
-cvar_t	pingplreport		= {"pingplreport", "0", false};//R00k Not implemented yet *IGNORE SPAMMING CONSOLE*
-cvar_t	cl_shownet			= {"cl_shownet","0"};	// can be 0, 1, or 2
-cvar_t	cl_nolerp			= {"cl_nolerp","0"};
-cvar_t	lookspring			= {"lookspring","0", true};
-cvar_t	lookstrafe			= {"lookstrafe","0", true};
-cvar_t	sensitivity			= {"sensitivity","3", true};
-cvar_t	cl_autofocus		= {"cl_autofocus","1", true};//R00k: if alt-tabbed away and a Match is about to start, bring us back into the game!
+cvar_t	cl_name			= {"_cl_name", "player", true};
+cvar_t	cl_color		= {"_cl_color", "0", true};
+cvar_t	cl_echo_qversion= {"cl_echo_qversion", "1", true};
+cvar_t	pingplreport	= {"pingplreport", "0", false};//R00k Not implemented yet *IGNORE SPAMMING CONSOLE*
+cvar_t	cl_shownet		= {"cl_shownet","0"};	// can be 0, 1, or 2
+cvar_t	cl_nolerp		= {"cl_nolerp","0"};
+cvar_t	lookspring		= {"lookspring","0", true};
+cvar_t	lookstrafe		= {"lookstrafe","0", true};
+cvar_t	sensitivity		= {"sensitivity","3", true};
+cvar_t	cl_autofocus	= {"cl_autofocus","1", true};//R00k: if alt-tabbed away and a Match is about to start, bring us back into the game!
 // we need to declare some mouse variables here, because the menu system
 // references them even when on a unix system.
-cvar_t	m_pitch				= {"m_pitch","0.022", true};
-cvar_t	m_yaw				= {"m_yaw","0.022", true};
-cvar_t	m_forward			= {"m_forward","1", true};
-cvar_t	m_side				= {"m_side","0.8", true};
+cvar_t	m_pitch			= {"m_pitch","0.022", true};
+cvar_t	m_yaw			= {"m_yaw","0.022", true};
+cvar_t	m_forward		= {"m_forward","1", true};
+cvar_t	m_side			= {"m_side","0.8", true};
 
 //PROQUAKE ADDITIONS _START
 // JPG - added these for %r formatting
-cvar_t	pq_needrl			= {"pq_needrl", "I need RL", true};
-cvar_t	pq_haverl			= {"pq_haverl", "I have RL", true};
-cvar_t	pq_needrox			= {"pq_needrox", "I need rockets", true};
+cvar_t	pq_needrl		= {"pq_needrl", "I need RL", true};
+cvar_t	pq_haverl		= {"pq_haverl", "I have RL", true};
+cvar_t	pq_needrox		= {"pq_needrox", "I need rockets", true};
 
 // JPG - added these for %p formatting
-cvar_t	pq_quad				= {"pq_quad", "quad", true};
-cvar_t	pq_pent				= {"pq_pent", "pent", true};
-cvar_t	pq_ring				= {"pq_ring", "eyes", true};
+cvar_t	pq_quad			= {"pq_quad", "quad", true};
+cvar_t	pq_pent			= {"pq_pent", "pent", true};
+cvar_t	pq_ring			= {"pq_ring", "eyes", true};
 
 // R00k: added for %a formatting
-cvar_t	pq_armor			= {"pq_armor", "[G]:[Y]:[R]", true};
+cvar_t	pq_armor		= {"pq_armor", "[G]:[Y]:[R]", true};
 
 // JPG 3.00 - added these for %w formatting
 cvar_t	pq_weapons			= {"pq_weapons", "SSG:NG:SNG:GL:RL:LG", true};
@@ -73,23 +73,43 @@ cvar_t	cl_sbar_drawface	= {"cl_sbar_drawface","1",true};
 cvar_t	cl_rocket2grenade	= {"cl_r2g", "0"};
 cvar_t	cl_levelshots		= {"cl_levelshots", "1",true};//R00k
 cvar_t	cl_muzzleflash		= {"cl_muzzleflash", "1",true};
+
+cvar_t	cl_muzzleflash_1_x	= {"cl_muzzleflash_1_x","0",true };
+cvar_t	cl_muzzleflash_1_z	= {"cl_muzzleflash_1_z","0",true };
+cvar_t	cl_muzzleflash_2_x	= {"cl_muzzleflash_2_x","0",true };
+cvar_t	cl_muzzleflash_2_z	= {"cl_muzzleflash_2_z","0",true };
+cvar_t	cl_muzzleflash_3_x	= {"cl_muzzleflash_3_x","0",true };
+cvar_t	cl_muzzleflash_3_z	= {"cl_muzzleflash_3_z","0",true };
+cvar_t	cl_muzzleflash_4_x	= {"cl_muzzleflash_4_x","0",true };
+cvar_t	cl_muzzleflash_4_z	= {"cl_muzzleflash_4_z","0",true };
+cvar_t	cl_muzzleflash_5_x	= {"cl_muzzleflash_5_x","0",true };
+cvar_t	cl_muzzleflash_5_z	= {"cl_muzzleflash_5_z","0",true };
+cvar_t	cl_muzzleflash_6_x	= {"cl_muzzleflash_6_x","0",true };
+cvar_t	cl_muzzleflash_6_z	= {"cl_muzzleflash_6_z","0",true };
+cvar_t	cl_muzzleflash_7_x	= {"cl_muzzleflash_7_x","0",true };
+cvar_t	cl_muzzleflash_7_z	= {"cl_muzzleflash_7_z","0",true };
+cvar_t	cl_muzzleflash_8_x	= {"cl_muzzleflash_8_x","0",true };
+cvar_t	cl_muzzleflash_8_z	= {"cl_muzzleflash_8_z","0",true };
+
 cvar_t	r_glowlg			= {"r_glowlg", "0",true};//R00k
 cvar_t	r_powerupglow		= {"r_powerupglow", "1",true};//0=off, 1=colored, 2= white
 cvar_t	r_explosiontype		= {"r_explosiontype", "1",true};
 cvar_t	r_explosionlight	= {"r_explosionlight", "1",true};
 cvar_t	r_rocketlight		= {"r_rocketlight", "1",true};
 #ifdef GLQUAKE
-cvar_t	r_explosionlightcolor = {"r_explosionlightcolor", "0"};
+cvar_t	r_explosionlightcolor	= {"r_explosionlightcolor", "0"};
 cvar_t	r_rocketlightcolor	= {"r_rocketlightcolor", "0"};
 #endif
 cvar_t	r_rockettrail		= {"r_rockettrail", "3",true};
 cvar_t	r_grenadetrail		= {"r_grenadetrail", "1",true};
 
-cvar_t	cl_itembob			= {"cl_itembob", "0",true};
+cvar_t	cl_independentphysics	= {"cl_independentphysics", "1",true};
+
+cvar_t	cl_itembob		= {"cl_itembob", "0",true};
 cvar_t	cl_demospeed		= {"cl_demospeed", "1"};
 cvar_t	cl_deadbodyfilter	= {"cl_deadbodyfilter", "0",true};
 cvar_t	cl_gibfilter		= {"cl_gibfilter", "0",true};
-cvar_t	cl_maxfps			= {"cl_maxfps", "75", true, true};
+cvar_t	cl_maxfps		= {"cl_maxfps", "125", true, true};
 cvar_t	cl_advancedcompletion = {"cl_advancedcompletion", "1"};
 
 cvar_t	scr_nocenterprint	= {"scr_nocenterprint", "0",false};
@@ -102,11 +122,11 @@ cvar_t	cl_footsteps		= {"cl_footsteps", "0", false};//Dont save this to the conf
 cvar_t	cl_lightning_zadjust = {"cl_lightning_zadjust", "16", true};
 
 cvar_t	cl_web_download		= {"cl_web_download", "1", true};
-cvar_t	cl_web_download_url	= {"cl_web_download_url", "downloads.quake-1.com/", true};
+cvar_t	cl_web_download_url	= {"cl_web_download_url", "quakeone.com/qrack/", true};
 cvar_t	cl_checkForUpdate	= {"cl_checkForUpdate", "1", true};
-cvar_t	cl_proquake			= {"cl_proquake", "1", true}; //R00k: ProQuake server connection compatibility.
+cvar_t	cl_proquake		= {"cl_proquake", "1", true}; //R00k: ProQuake server connection compatibility.
 
-cvar_t	cl_netfps			= {"cl_netfps", "40", true};//From DarkPlaces, caps the rate the client sends input to the server.
+cvar_t	cl_netfps		= {"cl_netfps", "40", true};//From DarkPlaces, caps the rate the client sends input to the server.
 
 cvar_t	slist_filter_noplayers = {"slist_filter_noplayers", "0", true};
 /*
@@ -123,16 +143,16 @@ client_state_t		cl;
 efrag_t				cl_efrags[MAX_EFRAGS];
 
 entity_t			*cl_entities; //johnfitz -- was a static array, now on hunk
-int					cl_max_edicts; //johnfitz -- only changes when new map loads
+int				cl_max_edicts; //johnfitz -- only changes when new map loads
 
 entity_t			cl_static_entities[MAX_STATIC_ENTITIES];
 
-lightstyle_t		cl_lightstyle[MAX_LIGHTSTYLES];
+lightstyle_t			cl_lightstyle[MAX_LIGHTSTYLES];
 dlight_t			cl_dlights[MAX_DLIGHTS];
 
-int					cl_numvisedicts;
+int				cl_numvisedicts;
 entity_t			*cl_visedicts[MAX_VISEDICTS];
-modelindex_t		cl_modelindex[NUM_MODELINDEX];
+modelindex_t			cl_modelindex[NUM_MODELINDEX];
 char				*cl_modelnames[NUM_MODELINDEX];
 
 tagentity_t			q3player_body, q3player_head;
@@ -474,6 +494,35 @@ void CL_SignonReply (void)
 
 /*
 =====================
+CL_LoadRandomDemo
+
+Called to play a random .dem file in the path
+=====================
+*/
+void CL_LoadRandomDemo (void)
+{
+	searchpath_t	*search;
+	extern	void EraseDirEntries (void);
+	int n;
+
+	EraseDirEntries ();//reset the filelist in case we change gamedir
+
+	for (search = com_searchpaths ; search ; search = search->next)
+	{
+		if (!search->pack)
+		{
+			RDFlags |= (RD_STRIPEXT | RD_NOERASE);
+			ReadDir (va("%s/demos", search->filename), "*.dem");
+		}
+	}
+
+	n = lhrandom(1,num_files);//only supports up to 32768
+
+	Cbuf_AddText (va("playdemo demos/%s\n", filelist[n].name));
+}
+
+/*
+=====================
 CL_NextDemo
 
 Called to play the next demo in the demo loop
@@ -481,24 +530,22 @@ Called to play the next demo in the demo loop
 */
 int CL_NextDemo (void)
 {
-	char	str[128];
+	char	str[1024];
 
 	if (cls.demonum == -1)
-	return 0;		// don't play demos
+		return 0;		// don't play demos
 
-	SCR_BeginLoadingPlaque ();
-
-	if (!cls.demos[cls.demonum][0] || cls.demonum == MAX_DEMOS)
-	{
+	if (cls.demonum == MAX_DEMOS)//reset counter
 		cls.demonum = 0;
-		if (!cls.demos[cls.demonum][0])
-		{
-			Con_Printf ("No demos listed with startdemos\n");
-			cls.demonum = -1;
 
-			return 0;
-		}
+	if (!cls.demos[cls.demonum][0])
+	{
+		//Con_Printf ("No demos listed with startdemos\n");
+		CL_LoadRandomDemo ();//R00k
+		return 1;
 	}
+	
+	SCR_BeginLoadingPlaque ();
 
 	Q_snprintfz (str, sizeof(str), "playdemo %s\n", cls.demos[cls.demonum]);
 	Cbuf_InsertText (str);
@@ -517,7 +564,8 @@ void CL_PrintEntities_f (void)
 	entity_t	*ent;
 	int			i;
 
-	Con_Printf ("Entities currently not culled:\n");
+	Con_Printf ("------------------------------\nTotal Number of Entities: %i\n------------------------------\n", cl.num_entities);
+	Con_Printf ("Entities currently not culled:\n------------------------------\n");
 
 	for (i = 0, ent = cl_entities ; i < cl.num_entities ; i++, ent++)
 	{		
@@ -646,13 +694,17 @@ Determines the fraction between the last two messages that the objects
 should be put at.
 ===============
 */
+
 float CL_LerpPoint (void)
 {
 	float	f, frac;
 
 	f = cl.mtime[0] - cl.mtime[1];
 
-	if (!f || cl_nolerp.value || cls.timedemo || sv.active)
+	if (cl_nolerp.value)
+		return 1;
+
+	if (!f || cls.timedemo || (sv.active && !cl_independentphysics.value))
 	{
 		cl.ctime = cl.time = cl.mtime[0];
 		return 1;
@@ -682,9 +734,10 @@ float CL_LerpPoint (void)
 		}
 		frac = 1;
 	}
-
+	
 	return frac;
 }
+
 
 qboolean Model_isDead (int modelindex, int frame)
 {
@@ -914,8 +967,8 @@ void CL_Footsteps(entity_t	*ent, int frame)
 			}
 		}
 
-		//GetNodePoint(ent->origin, dest);//SOUNDS BASED ON texture: WATER, GRass, metal, dirt, wood, or tile.
-
+		//modify CL_TexturePoint to get the name of the texture under our feet
+		
 		if (f == 1)
 			S_StartSound(e, 0, cl_sfx_step1, ent->origin, 0.78f, 1.0f);
 		else if (f == 2)
@@ -1062,7 +1115,7 @@ void CL_RelinkEntities (void)
 			ent->frame_start_time     = 0;
 			ent->translate_start_time = 0;
 			ent->rotate_start_time    = 0;
-
+			ent->lerpflags |= LERP_RESETMOVE|LERP_RESETANIM; //johnfitz -- next time this entity slot is reused, the lerp will need to be reset
 			//MH: and the poses
 			ent->pose1 = ent->pose2 = 0;
 
@@ -1115,8 +1168,14 @@ void CL_RelinkEntities (void)
 			}
 		}
 
-		if (cl_deadbodyfilter.value && (ent->model->type == mod_alias || ent->model->type == mod_md3) && Model_isDead(ent->modelindex, ent->frame))
-			continue;
+		if (cl_deadbodyfilter.value)
+		{
+			if (ent->model->type == mod_alias || ent->model->type == mod_md3)
+			{
+				if (Model_isDead(ent->modelindex, ent->frame) && (ent->modelindex != cl_modelindex[mi_zombie]))
+					continue;
+			}
+		}
 
 		if (cl_gibfilter.value && (ent->model->type == mod_alias || ent->model->type == mod_md3) && 
 			(ent->modelindex == cl_modelindex[mi_gib1] || ent->modelindex == cl_modelindex[mi_gib2] || 
@@ -1188,15 +1247,15 @@ void CL_RelinkEntities (void)
 			}
 
 			#ifdef GLQUAKE
-				if (ent->modelindex == cl_modelindex[mi_shambler] && qmb_initialized && gl_part_lightning.value)
-					dl->type = lt_blue;
+			if (ent->modelindex == cl_modelindex[mi_shambler] && qmb_initialized && gl_part_lightning.value)
+				dl->type = lt_blue;
+			else
+			{
+				if (ent->modelindex == cl_modelindex[mi_scrag] && qmb_initialized)
+					dl->type = lt_green;
 				else
-				{
-					if (ent->modelindex == cl_modelindex[mi_scrag] && qmb_initialized)
-						dl->type = lt_green;
-					else
-						dl->type = lt_muzzleflash;
-				}
+					dl->type = lt_muzzleflash;
+			}
 
 			// check for progs/player.mdl and if cl.stats[STAT_ACTIVEWEAPON] == whatever
 			// and change the muzzle flash colour depending on the weapon
@@ -1232,29 +1291,59 @@ void CL_RelinkEntities (void)
 
 					VectorMA (smokeorg, (18*scale), fv, smokeorg);
 
-					if (r_drawviewmodel.value > 0)
-					{						
-						if ((cl.stats[STAT_ACTIVEWEAPON] == IT_NAILGUN)||(cl.stats[STAT_ACTIVEWEAPON] == IT_SUPER_SHOTGUN))
-						{
-								VectorMA (smokeorg, -3, rv, smokeorg);
-								QMB_MuzzleFlash (smokeorg);					
-								VectorMA (smokeorg, 6, rv, smokeorg2);
-								QMB_MuzzleFlash (smokeorg2);				
+					if (r_drawviewmodel.value > 0)//R00k: custom particle muzzleflashes
+					{							
+						switch (cl.stats[STAT_ACTIVEWEAPON])
+						{						
+						case IT_SHOTGUN:
+							VectorMA(smokeorg, (cl_muzzleflash_2_x.value), rv, smokeorg);
+							VectorMA(smokeorg, (cl_muzzleflash_2_z.value), uv, smokeorg);
+							QMB_MuzzleFlash(smokeorg);
+							break;
+						case IT_SUPER_SHOTGUN:
+							VectorCopy(smokeorg, smokeorg2);
+							VectorMA(smokeorg, (cl_muzzleflash_3_x.value - 2), rv, smokeorg);
+							VectorMA(smokeorg, (cl_muzzleflash_3_z.value), uv, smokeorg);
+							QMB_MuzzleFlash(smokeorg);
+							VectorMA(smokeorg2, (cl_muzzleflash_3_x.value + 2), rv, smokeorg2);
+							VectorMA(smokeorg2, (cl_muzzleflash_3_z.value), uv, smokeorg2);
+							QMB_MuzzleFlash(smokeorg2);
+							break;
+						case IT_NAILGUN:
+							VectorCopy(smokeorg, smokeorg2);
+							VectorMA(smokeorg, (cl_muzzleflash_4_x.value - 2), rv, smokeorg);
+							VectorMA(smokeorg, (cl_muzzleflash_4_z.value), uv, smokeorg);
+							QMB_MuzzleFlash(smokeorg);
+							VectorMA(smokeorg2, (cl_muzzleflash_4_x.value + 2), rv, smokeorg2);
+							VectorMA(smokeorg2, (cl_muzzleflash_4_z.value), uv, smokeorg2);
+							QMB_MuzzleFlash(smokeorg2);
+							break;
+						case IT_SUPER_NAILGUN:
+							VectorMA(smokeorg, (cl_muzzleflash_5_x.value), rv, smokeorg);
+							VectorMA(smokeorg, (cl_muzzleflash_5_z.value), uv, smokeorg);
+							QMB_MuzzleFlash(smokeorg);
+							break;
+						case IT_GRENADE_LAUNCHER:
+							VectorMA(smokeorg, (cl_muzzleflash_6_x.value), rv, smokeorg);
+							VectorMA(smokeorg, (cl_muzzleflash_6_z.value), uv, smokeorg);
+							QMB_MuzzleFlash(smokeorg);
+							break;
+						case IT_ROCKET_LAUNCHER:
+							VectorMA(smokeorg, (cl_muzzleflash_7_x.value), rv, smokeorg);
+							VectorMA(smokeorg, (cl_muzzleflash_7_z.value), uv, smokeorg);
+							QMB_MuzzleFlash(smokeorg);
+							break;
+						case IT_LIGHTNING:
+							VectorMA(smokeorg, (cl_muzzleflash_8_x.value), rv, smokeorg);
+							VectorMA(smokeorg, (cl_muzzleflash_8_z.value), uv, smokeorg);
+							QMB_MuzzleFlashLG(smokeorg);
+							break;
+						default:
+							VectorMA(smokeorg, (cl_muzzleflash_1_x.value), rv, smokeorg);
+							VectorMA(smokeorg, (cl_muzzleflash_1_z.value), uv, smokeorg);							
+							QMB_MuzzleFlash(smokeorg);
+							break;
 						}
-						else
-						{
-							if ((cl.stats[STAT_ACTIVEWEAPON] == IT_SUPER_NAILGUN)||(cl.stats[STAT_ACTIVEWEAPON] == IT_SHOTGUN) || (cl.stats[STAT_ACTIVEWEAPON] == IT_ROCKET_LAUNCHER))
-							{
-								QMB_MuzzleFlash (smokeorg);
-							}
-							else
-							{
-								if (cl.stats[STAT_ACTIVEWEAPON] == IT_LIGHTNING)
-								{
-									QMB_MuzzleFlashLG(smokeorg);
-								}						
-							}
-						}					
 					}
 				}
 				else
@@ -1526,10 +1615,13 @@ void CL_CalcCrouch (void)
 	static	vec3_t	oldorigin = {0, 0, 0};
 	static	float	oldz = 0, extracrouch = 0, crouchspeed = 100;
 	
+	if (!cl.num_entities)//JQ1.70
+		return;
+
 	ent = &cl_entities[cl.viewentity];
 
 	if (!ent)//Seems we need this here, because connecting to a server, from the server browser menu, before/without previously loading a map, would crash the engine on the 'teleported =' line of code.
-		return;//this is a total hack, until i find why entity_t hasnt been enabled.
+		return;//this is a total hack, until i find why entity_t hasnt been initialized.
 
 	teleported = !VectorL2Compare(ent->origin, oldorigin, 48);
 	VectorCopy(ent->origin, oldorigin);
@@ -1691,10 +1783,12 @@ void CL_SendCmd (void)
 		CL_BaseMove (&cmd);		
 
 		// allow mice or other external controllers to add to the move
-		IN_Move (&cmd);
+		IN_Move (&cl.pendingcmd);
 
 		CL_SendMove (&cmd);		
 	}
+
+	memset(&cl.pendingcmd, 0, sizeof(cl.pendingcmd));
 
 	if (cls.demoplayback)
 	{
@@ -1717,22 +1811,6 @@ void CL_SendCmd (void)
 	
 	SZ_Clear (&cls.message);
 }
-
-#ifdef GLQUAKE
-void CL_Fog_f (void) 
-{
-	extern cvar_t gl_fogred, gl_foggreen, gl_fogblue, gl_fogenable;
-	if (Cmd_Argc () == 1) {
-		Con_Printf ("\"fog\" is \"%f %f %f %f\"\n", gl_fogdensity.value, gl_fogred.value, gl_foggreen.value, gl_fogblue.value);
-		return;
-	}
-	gl_fogenable.value = 1;
-	gl_fogdensity.value = atof(Cmd_Argv(1));//fitzquake support
-	gl_fogred.value     = atof(Cmd_Argv(2));
-	gl_foggreen.value   = atof(Cmd_Argv(3));
-	gl_fogblue.value    = atof(Cmd_Argv(4));
-}
-#endif
 
 /*
 ===============
@@ -1980,6 +2058,23 @@ void CL_Init (void)
 	Cvar_RegisterVariable (&cl_rocket2grenade);
 	Cvar_RegisterVariable (&cl_demorewind);
 	Cvar_RegisterVariable (&cl_muzzleflash);
+	Cvar_RegisterVariable (&cl_muzzleflash_1_x);
+	Cvar_RegisterVariable (&cl_muzzleflash_1_z);
+	Cvar_RegisterVariable (&cl_muzzleflash_2_x);
+	Cvar_RegisterVariable (&cl_muzzleflash_2_z);
+	Cvar_RegisterVariable (&cl_muzzleflash_3_x);
+	Cvar_RegisterVariable (&cl_muzzleflash_3_z);
+	Cvar_RegisterVariable (&cl_muzzleflash_4_x);
+	Cvar_RegisterVariable (&cl_muzzleflash_4_z);
+	Cvar_RegisterVariable (&cl_muzzleflash_5_x);
+	Cvar_RegisterVariable (&cl_muzzleflash_5_z);
+	Cvar_RegisterVariable (&cl_muzzleflash_6_x);
+	Cvar_RegisterVariable (&cl_muzzleflash_6_z);
+	Cvar_RegisterVariable (&cl_muzzleflash_7_x);
+	Cvar_RegisterVariable (&cl_muzzleflash_7_z);
+	Cvar_RegisterVariable (&cl_muzzleflash_8_x);
+	Cvar_RegisterVariable (&cl_muzzleflash_8_z);
+
 	Cvar_RegisterVariable (&r_glowlg);
 	Cvar_RegisterVariable (&r_powerupglow);
 	Cvar_RegisterVariable (&r_explosiontype);
@@ -1998,11 +2093,12 @@ void CL_Init (void)
 	Cvar_RegisterVariable (&cl_gibfilter);
 	Cvar_RegisterVariable (&cl_maxfps);
 	Cvar_RegisterVariable (&cl_advancedcompletion);
+
 	Cvar_RegisterVariable (&scr_nocenterprint);
 	Cvar_RegisterVariable (&cl_nomessageprint);
 	Cvar_RegisterVariable (&chase_transparent);//R00k
 	Cvar_RegisterVariable (&cl_basespeedkey);
-    Cmd_AddCommand ("bestweapon", Bestweapon_f);
+	Cmd_AddCommand ("bestweapon", Bestweapon_f);
 
 	// JPG - added these for %r formatting
 	Cvar_RegisterVariable (&pq_needrl);
@@ -2028,6 +2124,7 @@ void CL_Init (void)
 	Cvar_RegisterVariable (&pq_smoothcam);	
 	
 	Cmd_AddCommand ("entities", CL_PrintEntities_f);
+	Cmd_AddCommand ("fog",Fog_FogCommand_f);//R00k from FitzQuake
 	Cmd_AddCommand ("disconnect", CL_Disconnect_f);
 	Cmd_AddCommand ("record", CL_Record_f);
 	Cmd_AddCommand ("stop", CL_Stop_f);
@@ -2056,10 +2153,6 @@ void CL_Init (void)
 	Cvar_RegisterVariable (&sys_highpriority);
 	Cvar_RegisterVariable (&slist_filter_noplayers);
 	Cvar_RegisterVariable (&cl_netfps);//From DarkPlaces
-
-	#ifdef GLQUAKE
-	Cmd_AddCommand ("fog",CL_Fog_f);//R00k
-	#endif
-
-	CL_CheckForUpdate();
+	Cvar_RegisterVariable (&cl_independentphysics);
+//	CL_CheckForUpdate(); TODO...
 }

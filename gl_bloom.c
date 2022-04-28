@@ -204,8 +204,8 @@ void R_Bloom_InitTextures( void )
 	for (screen_texture_height = 1;screen_texture_height < vid_height.value;screen_texture_height *= 2);
 
     //disable blooms if we can't handle a texture of that size
-    if( screen_texture_width > 2048 ||
-        screen_texture_height > 2048 ) {
+    if( screen_texture_width > 4096 || screen_texture_height > 4096 ) 
+	{
         screen_texture_width = screen_texture_height = 0;
         Cvar_SetValue ("r_bloom", 0);
         Con_Printf( "WARNING: 'R_InitBloomScreenTexture' too high resolution for Light Bloom. Effect disabled\n" );
@@ -216,7 +216,6 @@ void R_Bloom_InitTextures( void )
     size = screen_texture_width * screen_texture_height * 4;
     data = Q_malloc( size );
     memset( data, 255, size );
-//  r_bloomscreentexture = R_LoadPic( "***r_bloomscreentexture***", &data, screen_texture_width, screen_texture_height, IT_NOMIPMAP|IT_NOCOMPRESS|IT_NOPICMIP|IT_NOALPHA, 3 );
 	r_bloomscreentexture = GL_LoadTexture ( "***r_screenbackuptexture***", screen_texture_width, screen_texture_height, data, TEX_LUMA, 4);
     Q_free ( data );
 
@@ -231,7 +230,6 @@ void R_Bloom_InitTextures( void )
         r_screendownsamplingtexture_size = (int)(BLOOM_SIZE * 2);
         data = Q_malloc( r_screendownsamplingtexture_size * r_screendownsamplingtexture_size * 4 );
         memset( data, 0, r_screendownsamplingtexture_size * r_screendownsamplingtexture_size * 4 );
-//      r_bloomdownsamplingtexture = R_LoadPic( "***r_bloomdownsamplingtexture***", &data, r_screendownsamplingtexture_size, r_screendownsamplingtexture_size, IT_NOMIPMAP|IT_NOCOMPRESS|IT_NOPICMIP|IT_NOALPHA, 3 );
 		r_bloomdownsamplingtexture = GL_LoadTexture ( "***r_bloomdownsamplingtexture***", r_screendownsamplingtexture_size, r_screendownsamplingtexture_size, data, TEX_LUMA, 4);
         Q_free ( data );
     }
@@ -392,7 +390,7 @@ void R_Bloom_GeneratexDiamonds( void )
             for(j=0; j<r_bloom_diamond_size.value; j++) {
 				
 				if ((chase_active.value)||(gl_overbright.value)||(cl.viewent.model->name == NULL))
-					intensity = r_bloom_intensity.value * 0.1 * Diamond4x[i][j];
+					intensity = r_bloom_intensity.value * 0.1f * Diamond4x[i][j];
 				else
 					intensity = r_bloom_intensity.value * 0.8f * Diamond4x[i][j];
                 if( intensity < 0.01f ) continue;
@@ -430,13 +428,11 @@ void R_Bloom_DownsampleView( void )
         int     midsample_height = r_screendownsamplingtexture_size * sampleText_tch;
         
         //copy the screen and draw resized
-//      GL_Bind(0, r_bloomscreentexture);
 		glBindTexture(GL_TEXTURE_2D, r_bloomscreentexture);
         glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, curView_x, vid_height.value - (curView_y + curView_height), curView_width, curView_height);
         R_Bloom_Quad( 0,  vid_height.value-midsample_height, midsample_width, midsample_height, screenText_tcw, screenText_tch  );
         
         //now copy into Downsampling (mid-sized) texture
-        //GL_Bind(0, r_bloomdownsamplingtexture);
 		glBindTexture(GL_TEXTURE_2D, r_bloomdownsamplingtexture);
         glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, midsample_width, midsample_height);
 
@@ -448,15 +444,14 @@ void R_Bloom_DownsampleView( void )
         glEnable( GL_BLEND );
         glBlendFunc(GL_ONE, GL_ONE);
         glColor4f( 0.5f, 0.5f, 0.5f, 1.0f );
-        //GL_Bind(0, r_bloomscreentexture);
 		glBindTexture(GL_TEXTURE_2D, r_bloomscreentexture);
         R_Bloom_Quad( 0,  vid_height.value-sample_height, sample_width, sample_height, screenText_tcw, screenText_tch );
         glColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
         glDisable( GL_BLEND );
 
-    } else {    //downsample simple
-
-        //GL_Bind(0, r_bloomscreentexture);
+    } 
+	else 
+	{    //downsample simple
 		glBindTexture(GL_TEXTURE_2D, r_bloomscreentexture);
         glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, curView_x, vid_height.value - (curView_y + curView_height), curView_width, curView_height);
         R_Bloom_Quad( 0, vid_height.value-sample_height, sample_width, sample_height, screenText_tcw, screenText_tch );
@@ -524,7 +519,7 @@ void R_BloomBlend (int bloom)
     
     //copy the screen space we'll use to work into the backup texture
 	glBindTexture(GL_TEXTURE_2D, r_bloombackuptexture);
-    glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, r_screenbackuptexture_width, r_screenbackuptexture_height );  
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, r_screenbackuptexture_width, r_screenbackuptexture_height );  
 	
     //create the bloom image
 	R_Bloom_DownsampleView();

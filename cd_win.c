@@ -399,6 +399,7 @@ void CDAudio_Update (void)
 	if (fmod_loaded)
 	{
 		FMOD_ChangeVolume (bgmvolume.value);
+		return;
 	}
 
 	if (!enabled)

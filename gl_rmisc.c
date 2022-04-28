@@ -48,7 +48,6 @@ void GL_SetFragmentProgram (GLuint fp)
 	}
 }
 
-
 void GL_SetPrograms (GLuint vp, GLuint fp)
 {
 	GL_SetVertexProgram (vp);
@@ -246,7 +245,7 @@ void R_InitOtherTextures (void)
 	extern int	glasstexture;
 	extern void R_InitDecalTextures (void);
 
-	int		i, flags = TEX_MIPMAP | TEX_ALPHA;
+	int		i, flags = TEX_ALPHA;
 
 	float	cellData[32] = {0.2f,0.2f,0.2f,0.2f,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0};
 	float	cellFull[32][3];
@@ -281,7 +280,7 @@ void R_InitOtherTextures (void)
 	glasstexture		= GL_LoadTextureImage ("textures/shine_glass", NULL, 0, 0, flags | TEX_COMPLAIN);
 	solidskytexture2	= GL_LoadTextureImage ("textures/solidskytexture", NULL, 128, 128, flags | TEX_COMPLAIN);
 	alphaskytexture2	= GL_LoadTextureImage ("textures/alphaskytexture", NULL, 128, 128, flags | TEX_COMPLAIN);
-	logoTex				= GL_LoadTextureImage ("textures/qracklogo", NULL, 0, 0, TEX_ALPHA);
+	logoTex				= GL_LoadTextureImage ("textures/qracklogo", NULL, 0, 0, TEX_MIPMAP | TEX_ALPHA);
 
 	R_InitDecalTextures();
 	Mod_BuildDetailTexture ();
@@ -401,96 +400,6 @@ void R_PreMapLoad (char *mapname)
 	Cvar_Set ("mapname",mapname);
 	strcpy (cls.mapstring, mapname);
 	strcpy (sv_mapname.string, mapname);
-}
-
-/*
-=============
-Fog_ParseServerMessage
-
-handle an SVC_FOG message from server
-=============
-*/
-void Fog_ParseServerMessage (void)
-{
-	float density, red, green, blue, time;
-
-	density = MSG_ReadByte() / 100.0;
-	red = MSG_ReadByte() / 255.0;
-	green = MSG_ReadByte() / 255.0;
-	blue = MSG_ReadByte() / 255.0;
-	time = max(0.0, MSG_ReadShort() / 100.0);
-
-	Cvar_SetValue("gl_fogdensity",density);
-	Cvar_SetValue("gl_fogred",red);
-	Cvar_SetValue("gl_foggreen", green);
-	Cvar_SetValue("gl_fogblue",blue);
-	if (gl_fogenable.value < 2)	
-		Cvar_SetValue("gl_fogenable",1);
-}
-
-/*
-=============
-Fog_ParseWorldspawn
-
-called at map load
-=============
-*/
-void Fog_ParseWorldspawn (void)
-{
-	char key[128], value[4096];
-	char *data;
-	float fog_density;
-	float fog_red;
-	float fog_green;
-	float fog_blue;
-
-	if (gl_fogenable.value < 2)	
-		Cvar_SetValue("gl_fogenable",0);
-
-	data = COM_Parse(cl.worldmodel->entities);
-	
-	if (!data)
-		return; // error
-	
-	if (com_token[0] != '{')
-		return; // error
-	
-	while (1)
-	{
-		data = COM_Parse(data);
-
-		if (!data)
-			return; // error
-		
-		if (com_token[0] == '}')
-			break; // end of worldspawn
-		
-		if (com_token[0] == '_')
-			strcpy(key, com_token + 1);
-		else
-			strcpy(key, com_token);
-		
-		while (key[strlen(key)-1] == ' ') // remove trailing spaces
-			key[strlen(key)-1] = 0;
-		
-		data = COM_Parse(data);
-		
-		if (!data)
-			return; // error
-	
-		strcpy(value, com_token);
-
-		if (!strcmp("fog", key))
-		{
-			sscanf(value, "%f %f %f %f", &fog_density, &fog_red, &fog_green, &fog_blue);
-			Cvar_SetValue("gl_fogdensity",fog_density);
-			Cvar_SetValue("gl_fogred",fog_red);
-			Cvar_SetValue("gl_foggreen", fog_green);
-			Cvar_SetValue("gl_fogblue",fog_blue);
-			if (gl_fogenable.value < 2)	
-				Cvar_SetValue("gl_fogenable",1);
-		}
-	}
 }
 
 extern qboolean config_lock;
@@ -682,6 +591,8 @@ void R_NewMap (void)
 
 	ReadSkyBoxConfig();
 	
+	map_fallbackalpha = r_wateralpha.value;
+
 	// HACK HACK HACK - create two extra entities if drawing the player's multimodel
 	if (r_loadq3player)
 	{
@@ -694,6 +605,7 @@ void R_NewMap (void)
 	//R00k: clear out old centerstring when connecting to a new server/map.
 	memset (scr_centerstring, 0, sizeof(scr_centerstring));//R00k
 	memset (con_lastcenterstring, 0, sizeof(con_lastcenterstring));	
+	GL_RegisterVerts(MAX_MAP_VERTS);
 }
 /*
 ====================
@@ -735,3 +647,294 @@ void D_FlushCaches (void)
 {
 }
 */
+/*
+=========================================================================================================================
+MH -
+vertex arrays interface - written to duplicate the old immediate mode commands as much as possible to simplify porting
+
+this makes little attempt to do handholding and/or protecting the programmer from passing rubbish in, but then neither
+does immediate mode, so all's fair and equal.
+
+see also the defines in glquake.h
+
+=========================================================================================================================
+*/
+
+static float *VArrayVerts = NULL;
+static float *VArrayColors = NULL;
+static float *VArrayTexCoords[3] = {NULL, NULL, NULL};
+
+static int maxverts = 0;
+static int maxsurfverts = 0;
+
+extern qboolean vboSupported, vboUsed;
+extern GLuint vboId;
+
+void GL_RegisterVerts (int numverts)
+{
+	if (numverts > maxverts)
+	{
+		Q_free (VArrayVerts);
+		Q_free (VArrayColors);
+		Q_free (VArrayTexCoords[0]);
+		Q_free (VArrayTexCoords[1]);
+		Q_free (VArrayTexCoords[2]);
+
+		VArrayVerts			= (float *) Q_malloc (numverts * sizeof (float) * 3);
+		VArrayColors		= (float *) Q_malloc (numverts * sizeof (float) * 4);
+		VArrayTexCoords[0]	= (float *) Q_malloc (numverts * sizeof (float) * 2);
+		VArrayTexCoords[1]	= (float *) Q_malloc (numverts * sizeof (float) * 2);
+		VArrayTexCoords[2]	= (float *) Q_malloc (numverts * sizeof (float) * 2);
+
+		maxverts = numverts;		
+		Con_DPrintf (1,"Registered %i total verts.\n", numverts);
+/*
+		if (vboSupported)
+		{
+			if (vboUsed)
+			{
+				glDeleteBuffersARB(1, &vboId);
+				vboUsed = false;
+				glGenBuffersARB(1, &vboId);
+			}
+			if (!vboUsed) // draw using VBO
+			{
+				glBindBufferARB (GL_ARRAY_BUFFER_ARB, vboId);
+				glBufferDataARB (GL_ARRAY_BUFFER_ARB,  sizeof(VArrayVerts), VArrayVerts, GL_DYNAMIC_DRAW_ARB);
+				glBufferSubDataARB (GL_ARRAY_BUFFER_ARB, 0, sizeof(VArrayVerts), VArrayVerts);
+				vboUsed = true;
+			}
+		}
+*/
+	}
+
+	// take the max verts in all surfs
+	if (numverts > maxsurfverts)
+	{
+		maxsurfverts = numverts;
+	}
+}
+
+
+static int v_pos = 0;
+static int c_pos = 0;
+static int st_pos[3] = {0, 0, 0};
+static int va_numverts = 0;
+static GLenum VA_PRIMITIVE = GL_TRIANGLES;
+
+void vaBegin (GLenum PRIMITIVE_TYPE)
+{
+	VA_PRIMITIVE = PRIMITIVE_TYPE;
+}
+
+//Redraw array...
+void vaDrawArrays (void)
+{
+	if (va_numverts == 0)
+		return;
+	
+	glDrawArrays (VA_PRIMITIVE, 0, va_numverts);	
+}
+
+void vaEnd (void)
+{
+	// re-init the counters
+	v_pos = 0;
+	c_pos = 0;
+	st_pos[0] = st_pos[1] = st_pos[2] = 0;
+	va_numverts = 0;
+}
+
+
+void vaVertex2f (float v1, float v2)
+{
+	VArrayVerts[v_pos++] = v1;
+	VArrayVerts[v_pos++] = v2;
+	va_numverts++;
+}
+
+
+void vaVertex3f (float v1, float v2, float v3)
+{
+	VArrayVerts[v_pos++] = v1;
+	VArrayVerts[v_pos++] = v2;
+	VArrayVerts[v_pos++] = v3;
+	va_numverts++;
+}
+
+
+void vaVertex3fv (float *v)
+{
+	VArrayVerts[v_pos++] = v[0];
+	VArrayVerts[v_pos++] = v[1];
+	VArrayVerts[v_pos++] = v[2];
+	va_numverts++;
+}
+
+
+void vaTexCoord2f (float st1, float st2)
+{
+	VArrayTexCoords[0][st_pos[0]++] = st1;
+	VArrayTexCoords[0][st_pos[0]++] = st2;
+}
+
+
+void vaTexCoord3f (float st1, float st2, float st3)
+{
+	VArrayTexCoords[0][st_pos[0]++] = st1;
+	VArrayTexCoords[0][st_pos[0]++] = st2;
+	VArrayTexCoords[0][st_pos[0]++] = st3;
+}
+
+void vaTexCoord2fv (GLfloat *st)
+{
+	VArrayTexCoords[0][st_pos[0]++] = st[0];
+	VArrayTexCoords[0][st_pos[0]++] = st[1];
+}
+
+void vaMultiTexCoord2f (int st_array, float st1, float st2)
+{
+	VArrayTexCoords[st_array][st_pos[st_array]++] = st1;
+	VArrayTexCoords[st_array][st_pos[st_array]++] = st2;
+}
+
+void vaColor3f (float c1, float c2, float c3)
+{
+	VArrayColors[c_pos++] = c1;
+	VArrayColors[c_pos++] = c2;
+	VArrayColors[c_pos++] = c3;
+}
+
+
+void vaColor4f (float c1, float c2, float c3, float c4)
+{
+	VArrayColors[c_pos++] = c1;
+	VArrayColors[c_pos++] = c2;
+	VArrayColors[c_pos++] = c3;
+	VArrayColors[c_pos++] = c4;
+}
+
+
+void vaColor4fv (float *c)
+{
+	VArrayColors[c_pos++] = c[0];
+	VArrayColors[c_pos++] = c[1];
+	VArrayColors[c_pos++] = c[2];
+	VArrayColors[c_pos++] = c[3];
+}
+
+static qboolean vaEnabled = false;
+static qboolean cEnabled = false;
+static qboolean stEnabled[4] = {false, false, false, false};
+
+// set to something invalid initially...
+static GLenum vaClientActiveTexture = GL_POLYGON;
+
+void vaEnableVertexArray (int numverts)
+{
+	if (!vaEnabled)
+	{
+		/*
+	    if(vboUsed) // draw cube using VBO
+		{
+			// bind VBOs with IDs and set the buffer offsets of the bound VBOs
+			// When buffer object is bound with its ID, all pointers in gl*Pointer()
+			// are treated as offset instead of real pointer.
+			glBindBufferARB(GL_ARRAY_BUFFER_ARB, vboId);
+		}
+		*/
+		glEnableClientState (GL_VERTEX_ARRAY);
+	}
+	glVertexPointer (numverts, GL_FLOAT, sizeof (float) * numverts, VArrayVerts);	
+	vaEnabled = true;
+}
+
+
+void vaEnableColorArray (int numcolours)
+{
+	if (!cEnabled)
+		glEnableClientState (GL_COLOR_ARRAY);
+
+	glColorPointer (numcolours, GL_FLOAT, sizeof (float) * numcolours, VArrayColors);
+
+	cEnabled = true;
+}
+
+
+void vaDisableTexCoordArray (GLenum VA_TMU)
+{
+	int checknum = VA_TMU - GL_TEXTURE0;
+
+	if (stEnabled[checknum])
+	{
+		if (VA_TMU != vaClientActiveTexture)
+		{
+			glClientActiveTexture (VA_TMU);
+			vaClientActiveTexture = VA_TMU;
+		}
+
+		glDisableClientState (GL_TEXTURE_COORD_ARRAY);
+
+		stEnabled[checknum] = false;
+	}
+}
+
+
+void vaEnableTexCoordArray (GLenum VA_TMU, int VA_STARRAY, int numST)
+{
+	int checknum = VA_TMU - GL_TEXTURE0;
+
+	if (!stEnabled[checknum])
+	{
+		if (VA_TMU != vaClientActiveTexture)
+		{
+			glClientActiveTexture (VA_TMU);
+			vaClientActiveTexture = VA_TMU;
+		}
+
+		glEnableClientState (GL_TEXTURE_COORD_ARRAY);
+	}
+	else if (VA_TMU != vaClientActiveTexture)
+	{
+		glClientActiveTexture (VA_TMU);
+		vaClientActiveTexture = VA_TMU;
+	}
+
+	glTexCoordPointer (numST, GL_FLOAT, sizeof (float) * numST, VArrayTexCoords[VA_STARRAY]);
+
+	stEnabled[checknum] = true;
+}
+
+
+void vaDisableArrays (void)
+{
+	int i;
+
+	for (i = 3; i >= 0; i--)
+	{
+		if (stEnabled[i])
+		{
+			glClientActiveTexture (GL_TEXTURE0 + i);
+			glDisableClientState (GL_TEXTURE_COORD_ARRAY);
+		}
+	}
+
+	if (cEnabled)
+		glDisableClientState (GL_COLOR_ARRAY);
+
+	if (vaEnabled)
+		glDisableClientState (GL_VERTEX_ARRAY);
+/*
+    if(vboUsed)
+	{
+		// it is good idea to release VBOs with ID 0 after use.
+		// Once bound with 0, all pointers in gl*Pointer() behave as real
+		// pointer, so, normal vertex array operations are re-activated
+		glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+	}
+*/
+	stEnabled[0] = stEnabled[1] = stEnabled[2] = stEnabled[3] = false;
+	cEnabled = false;
+	vaEnabled = false;
+}
+

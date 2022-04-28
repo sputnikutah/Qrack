@@ -429,7 +429,7 @@ void Host_Restart_f (void)
 	char	startspot[MAX_QPATH];
 #endif
 
-	if (cls.demoplayback || !sv.active)
+	if (!sv.active)
 		return;
 
 	if (cmd_source != src_command)
@@ -713,7 +713,7 @@ void Host_Loadgame_f (void)
 
 	// Kludge to read saved games with newlines in title
 	do
-		fscanf_s (f, "%s\n", str);
+		fscanf_s (f, "%s\n", str, sizeof(str));
 	while (!feof(f) && !strstr(str, "kills:"));
 	for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
 		fscanf_s (f, "%f\n", &spawn_parms[i]);
@@ -723,7 +723,7 @@ void Host_Loadgame_f (void)
 	current_skill = (int)(tfloat + 0.1);
 	Cvar_SetValue ("skill", (float)current_skill);
 
-	fscanf_s (f, "%s\n", mapname);
+	fscanf_s (f, "%s\n", mapname, sizeof(mapname));
 	fscanf_s (f, "%f\n", &time);
 
 	CL_Disconnect_f ();
@@ -747,7 +747,7 @@ void Host_Loadgame_f (void)
 // load the light styles
 	for (i=0 ; i<MAX_LIGHTSTYLES ; i++)
 	{
-		fscanf_s (f, "%s\n", str);
+		fscanf_s (f, "%s\n", str,sizeof(str));
 		sv.lightstyles[i] = Hunk_AllocName (strlen(str)+1,"lightstyle");
 		strcpy (sv.lightstyles[i], str);
 	}
@@ -927,7 +927,7 @@ void Host_Say (qboolean teamonly)
 		if (pq_tempmute.value && sv.time - host_client->change_time < 1)
 			return;
 
-		if (host_client->mute == true)//r00k shaddup!
+		if (host_client->ignore == true)//r00k shaddup!(FIXME)
 			return;
 
 		// JPG 3.11 - feature request from Slot Zero
@@ -1448,12 +1448,12 @@ void Host_Kick_f (void)
 
 /*
 ==================
-Host_Mute_f
+Host_Ignore_f
 
 Shuts up a player for being stupid
 ==================
 */
-void Host_Mute_f (void)
+void Host_Ignore_f (void)
 {
 	client_t	*save;
 	int			i;
@@ -1477,14 +1477,11 @@ void Host_Mute_f (void)
 		if (!svs.clients[i].active)
 			return;
 		host_client = &svs.clients[i];	
-	}
 
-	if (i < svs.maxclients)
-	{
-		if (host_client->mute == false)
-			host_client->mute = true;
+		if (host_client->ignore == false)
+			host_client->ignore = true;
 		else
-			host_client->mute = false;
+			host_client->ignore = false;
 	}
 
 	host_client = save;
@@ -1812,11 +1809,13 @@ void Host_Startdemos_f (void)
 	}
 
 	c = Cmd_Argc() - 1;
+
 	if (c > MAX_DEMOS)
 	{
 		Con_Printf ("Max %i demos in demoloop\n", MAX_DEMOS);
 		c = MAX_DEMOS;
 	}
+
 	Con_Printf ("%i demo(s) in loop\n", c);
 
 	for (i=1 ; i<c+1 ; i++)
@@ -2094,7 +2093,7 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("begin", Host_Begin_f);
 	Cmd_AddCommand ("prespawn", Host_PreSpawn_f);
 	Cmd_AddCommand ("kick", Host_Kick_f);
-	Cmd_AddCommand ("mute", Host_Mute_f);//R00k: requested by Yellow#5
+	Cmd_AddCommand ("ignore", Host_Ignore_f);//R00k: requested by Yellow#5
 	Cmd_AddCommand ("ping", Host_Ping_f);
 	Cmd_AddCommand ("load", Host_Loadgame_f);
 	Cmd_AddCommand ("save", Host_Savegame_f);

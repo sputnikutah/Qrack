@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define	LIGHTMAP_BLOCK_WIDTH	128
 #define	LIGHTMAP_BLOCK_HEIGHT	128 
-#define MAX_LIGHTMAPS			192//64
+#define MAX_LIGHTMAPS			256//64
 
 static	int	lightmap_textures;
 unsigned	blocklights[LIGHTMAP_BLOCK_WIDTH*LIGHTMAP_BLOCK_HEIGHT*3];
@@ -40,7 +40,7 @@ static	glpoly_t	*lightmap_polys[MAX_LIGHTMAPS];
 static	qboolean	lightmap_modified[MAX_LIGHTMAPS];
 static	glRect_t	lightmap_rectchange[MAX_LIGHTMAPS];
 
-static	int	allocated[MAX_LIGHTMAPS][LIGHTMAP_BLOCK_WIDTH];
+int	allocated[MAX_LIGHTMAPS][LIGHTMAP_BLOCK_WIDTH];
 int	last_lightmap_allocated; //ericw -- optimization: remember the index of the last lightmap AllocBlock stored a surf in
 
 extern cvar_t gl_overbright;
@@ -96,15 +96,25 @@ void DrawGLPoly(glpoly_t *p)
 	int		i;
 	float	*v;
 
-	glBegin (GL_POLYGON);
+	vaEnableVertexArray (3);
+	vaEnableTexCoordArray (GL_TEXTURE0, VA_TEXTURE0, 2);
+
+	vaBegin (GL_POLYGON);
+
+//	glBegin (GL_POLYGON);
 
 	v = p->verts[0];
 	for (i=0 ; i<p->numverts ; i++, v+= VERTEXSIZE)
 	{
-		glTexCoord2f (v[3], v[4]);
-		glVertex3fv (v);
+		//glTexCoord2f (v[3], v[4]);
+		//glVertex3fv (v);
+		vaTexCoord2f (v[3], v[4]);
+		vaVertex3fv (v);
 	}	 
-	glEnd ();	 
+	//glEnd ();	 
+	vaDrawArrays();
+	vaEnd ();
+	vaDisableArrays();
 }
 
 
@@ -206,6 +216,8 @@ void EmitDetailPolys (void)
 	if (!detail_polys) 
 		return;
 
+	vaEnableVertexArray (3);
+	vaEnableTexCoordArray (GL_TEXTURE0, VA_TEXTURE0, 2);
 	GL_Bind (detailtexture);
 	glTexEnvf (GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
 	glBlendFunc (GL_DST_COLOR, GL_SRC_COLOR);
@@ -213,15 +225,21 @@ void EmitDetailPolys (void)
 
 	for (p = detail_polys ; p ; p = p->detail_chain)
 	{
-		glBegin (GL_POLYGON);
+		//glBegin (GL_POLYGON);
+		vaBegin (GL_POLYGON);
 		v = p->verts[0];
 		for (i=0 ; i<p->numverts ; i++, v+=VERTEXSIZE)
 		{
-			glTexCoord2f (v[7]*8, v[8]*8);//R00k increase size
-			glVertex3fv (v);
+		//	glTexCoord2f (v[7]*8, v[8]*8);//R00k increase size
+		//	glVertex3fv (v);
+			vaTexCoord2f (v[7]*8, v[8]*8);//R00k increase size
+			vaVertex3fv (v);
 		}
-		glEnd();
+		//glEnd();
+		vaDrawArrays();
+		vaEnd();	
 	}
+	vaDisableArrays();
 	 
 	glTexEnvf (GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -685,28 +703,31 @@ void EmitOutlinePolys(void)
 	glpoly_t	*p;
 	int			i;
 	float		*v;
+	float		line_width = bound (1,r_outline_surf.value,3);
 
 	if (!outline_polys) 
 		return;
 
-	if ((r_outline_surf.value > 1)||(r_viewleaf && r_viewleaf->contents == CONTENTS_SOLID))
-	{
-		glColor4f(0.3,0.5,0.1,0.1);//GREEN OUTLINE if we are in noclip
-	}
-	else
-		glColor4f(0,0,0,0.2);
+	if (!sv.active)// singleplayer only
+		return;
+
+	glColor4f(0.3,0.5,0.1,0.1);//GREEN OUTLINE 
+
+	if (r_viewleaf && r_viewleaf->contents == CONTENTS_SOLID)
+		glDisable (GL_DEPTH_TEST);
 
 	glEnable (GL_LINE_SMOOTH);
+	glPolygonMode (GL_FRONT_AND_BACK, GL_LINE);
+	glLineWidth (line_width);
 	glDisable (GL_TEXTURE_2D);
-	glCullFace (GL_BACK);
 
-	glPolygonMode (GL_FRONT, GL_LINE);
-
-	glLineWidth (1.0f);
+//	
+//	GL_PolygonOffset (-0.7);
 
 	for (p = outline_polys ; p ; p = p->outline_chain)
 	{
-		glBegin (GL_LINE_LOOP);		
+		glBegin (GL_TRIANGLE_FAN);		
+
 		v = p->verts[0];
 		for (i=0 ; i<p->numverts ; i++, v+=VERTEXSIZE)
 		{
@@ -714,15 +735,16 @@ void EmitOutlinePolys(void)
 		}
 		glEnd();
 	}
-	glCullFace (GL_FRONT);
+	
+//	GL_PolygonOffset (0);
+//	glCullFace (GL_FRONT);
 	glColor4f(1,1,1,1);
 	glDisable (GL_LINE_SMOOTH);
 	glEnable (GL_TEXTURE_2D);	
-	glPolygonMode (GL_FRONT, GL_FILL);
+	glPolygonMode (GL_FRONT_AND_BACK, GL_FILL);
+	glEnable (GL_DEPTH_TEST);
 	outline_polys = NULL;
-	glEnable (GL_TEXTURE_2D);	
 }
-
 
 /*
 ================
@@ -735,14 +757,18 @@ void R_BlendLightmaps (void)
 	glpoly_t	*p;
 	float		*v;
 
+	vaEnableVertexArray (3);
+	vaEnableTexCoordArray (GL_TEXTURE0, VA_TEXTURE0, 2);
+
 	glDepthMask (GL_FALSE);		// don't bother writing Z
 
 	glEnable (GL_BLEND);//<---- hmm this was missing?!
 
 	glBlendFunc (GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
 
-	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc ( GL_GREATER, 0.5 );
+	///fixme ?
+//	glEnable(GL_ALPHA_TEST);
+//	glAlphaFunc ( GL_GREATER, 0.5 );
 
 	for (i=0 ; i<MAX_LIGHTMAPS ; i++)
 	{
@@ -756,26 +782,31 @@ void R_BlendLightmaps (void)
 		
 		for (p = lightmap_polys[i] ; p ; p = p->chain)
 		{
-			glBegin (GL_POLYGON);
+			//glBegin (GL_POLYGON);
+			vaBegin (GL_POLYGON);
 			
 			v = p->verts[0];
 			
 			for (j = 0 ; j < p->numverts ; j++, v += VERTEXSIZE)
 			{
-				glTexCoord2f (v[5], v[6]);
-				glVertex3fv (v);
-			}
-			 
-			glEnd ();
+				//glTexCoord2f (v[5], v[6]);
+				//glVertex3fv (v);
+				vaTexCoord2f (v[5], v[6]);
+				vaVertex3fv (v);
+			}			 
+			//glEnd ();
+			vaDrawArrays();
+			vaEnd ();
+
 		}
 		lightmap_polys[i] = NULL;
 	}
-
+	vaDisableArrays();
 	glDisable (GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	glDisable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_GREATER,0.666f);
+//	glDisable(GL_ALPHA_TEST);
+//	glAlphaFunc(GL_GREATER,0.666f);
 
 	glDepthMask (GL_TRUE);		// back to normal Z buffering
 }
@@ -846,43 +877,7 @@ update:
 	base += (fa->light_t * LIGHTMAP_BLOCK_WIDTH + fa->light_s) * 4;
 	R_BuildLightMap (fa, base, LIGHTMAP_BLOCK_WIDTH * 4);
 }
-/*
-static void R_RenderAllDynamicLightmaps(model_t *model)
-{
-	msurface_t *s;
-	unsigned int waterline;
-	unsigned int i;
-	unsigned int k;
 
-	for (i = 0; i < model->numtextures; i++) 
-	{
-		if (!model->textures[i] || (!model->textures[i]->texturechain[0] && !model->textures[i]->texturechain[1])) 
-		{
-			continue;
-		}
-
-		for (waterline = 0; waterline < 2; waterline++) 
-		{
-			if (!(s = model->textures[i]->texturechain[waterline])) 
-			{
-				continue;
-			}
-
-			for ( ; s; s = s->texturechain) 
-			{
-				GL_Bind(lightmap_textures + s->lightmaptexturenum);
-				R_RenderDynamicLightmaps(s);
-				k = s->lightmaptexturenum;
-
-				if (lightmap_modified[k]) 
-				{
-					R_UploadLightMap(k);
-				}
-			}
-		}
-	}
-}
-*/
 extern float turbsin[];
 
 void R_DrawWaterSurfaces (void)
@@ -901,8 +896,6 @@ void R_DrawWaterSurfaces (void)
 
 	for (s = waterchain; s; s = s->texturechain)
 	{
-		glDepthMask (GL_TRUE);
-
 		name = s->texinfo->texture->name;
 
 		if (ISLAVATEX(name)) 
@@ -929,7 +922,7 @@ void R_DrawWaterSurfaces (void)
 			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 			glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 			glEnable (GL_BLEND);
-			glDepthMask (GL_FALSE);
+
 
 			vert = s->polys->verts[0];
 			vert += VERTEXSIZE;
@@ -961,7 +954,7 @@ void R_DrawWaterSurfaces (void)
 		glColor4f (1,1,1,1);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glDisable (GL_BLEND);
-		glDepthMask (GL_TRUE);
+
 	}
 }
 
@@ -974,6 +967,10 @@ void R_DrawAlphaChain (void)
 
 	if (!alphachain)
 		return;
+
+	vaEnableVertexArray (3);
+	vaEnableTexCoordArray (GL_TEXTURE0, VA_TEXTURE0, 2);
+	vaEnableTexCoordArray (GL_TEXTURE1, VA_TEXTURE1, 2);
 
 	glEnable (GL_ALPHA_TEST);
 
@@ -998,24 +995,31 @@ void R_DrawAlphaChain (void)
 				R_UploadLightMap (k);
 		}
 		
-		glBegin (GL_POLYGON);
+		//glBegin (GL_POLYGON);
+		vaBegin (GL_POLYGON);
 		v = s->polys->verts[0];
 		for (k = 0 ; k < s->polys->numverts ; k++, v += VERTEXSIZE)
 		{
 			if (gl_mtexable)
 			{
-				qglMultiTexCoord2f (GL_TEXTURE0, v[3], v[4]);
-				qglMultiTexCoord2f (GL_TEXTURE1, v[5], v[6]);
+			//	qglMultiTexCoord2f (GL_TEXTURE0, v[3], v[4]);
+			//	qglMultiTexCoord2f (GL_TEXTURE1, v[5], v[6]);
+				vaMultiTexCoord2f (VA_TEXTURE0, v[3], v[4]);
+				vaMultiTexCoord2f (VA_TEXTURE1, v[5], v[6]);
 			}
 			else
 			{
-				glTexCoord2f (v[3], v[4]);
+				//glTexCoord2f (v[3], v[4]);
+				vaTexCoord2f (v[3], v[4]);
 			}
-			glVertex3fv (v);
+			//glVertex3fv (v);
+			vaVertex3fv (v);
 		}		 
-		glEnd ();
+		//glEnd ();
+		vaDrawArrays();
+		vaEnd ();
 	}	 
-
+	vaDisableArrays();
 	alphachain = NULL;
 	alphachain_tail = &alphachain;
 
@@ -1100,7 +1104,7 @@ void DrawTextureChains (model_t *model, int contents)
 		glColor4f (1, 1, 1, 0.5);
 	}
 
-	for (i=0 ; i<model->numtextures ; i++)
+	for (i = 0 ; i < model->numtextures ; i++)
 	{
 		if (!model->textures[i] || (!model->textures[i]->texturechain[0] && !model->textures[i]->texturechain[1]))
 			continue;	
@@ -1185,6 +1189,9 @@ void DrawTextureChains (model_t *model, int contents)
 
 			for ( ; s ; s = s->texturechain)
 			{
+				if (s->flags & SURF_DRAWALPHA)
+					glEnable (GL_ALPHA_TEST);//alpha masked bmodels
+
 				if (mtex_lightmaps)
 				{
 					// bind the lightmap texture
@@ -1212,15 +1219,15 @@ void DrawTextureChains (model_t *model, int contents)
 				{						
 					if (doMtex1)
 					{
-						if (gl_textureless.value) //R00k - multitexture textureless world
+						if ((model->isworldmodel) && (gl_textureless.value)) //R00k - multitexture textureless world
 						{								
 							qglMultiTexCoord2f (GL_TEXTURE0_ARB, 0, 0);
 														
 							if (mtex_lightmaps)
 								qglMultiTexCoord2f (GL_LIGHTMAP_TEXTURE, v[5], v[6]);
 
-							if (mtex_fbs)
-								qglMultiTexCoord2f (GL_FB_TEXTURE, v[3], v[4]);
+//							if (mtex_fbs)
+//								qglMultiTexCoord2f (GL_FB_TEXTURE, v[3], v[4]);
 						}
 						else
 						{
@@ -1235,7 +1242,7 @@ void DrawTextureChains (model_t *model, int contents)
 					}
 					else
 					{//This is probably useless now since Qrack has become a bloated whore!
-						if (gl_textureless.value)
+						if ((model->isworldmodel) && (gl_textureless.value))
 						{								
 							glTexCoord2f (0, 0);
 						}
@@ -1294,6 +1301,8 @@ void DrawTextureChains (model_t *model, int contents)
 						drawfullbrights = true;
 					}
 				}
+				if (s->flags & SURF_DRAWALPHA)
+					glDisable (GL_ALPHA_TEST);//alpha masked bmodels
 			}
 		}
 
@@ -1308,8 +1317,6 @@ void DrawTextureChains (model_t *model, int contents)
 
 	if (gl_fb_bmodels.value)
 	{
-		if (gl_fogenable.value)
-			glEnable(GL_FOG);
 		if (render_lightmaps)
 			R_BlendLightmaps ();
 		if (drawfullbrights)
@@ -1331,7 +1338,7 @@ void DrawTextureChains (model_t *model, int contents)
 		EmitOutlinePolys();//R00k
 
 	if (gl_caustics.value)//r00k
-	EmitCausticsPolys ();
+		EmitCausticsPolys ();
 
 	if (gl_detail.value)//r00k
 	{
@@ -1356,7 +1363,7 @@ void DrawTextureChains (model_t *model, int contents)
 		glDisable (GL_BLEND);
 		glDepthMask (GL_TRUE);
 	}
-	
+
 	glColor4f(1,1,1,1);
 }
 #ifndef USEFAKEGL
@@ -1406,6 +1413,9 @@ void R_DrawBrushModel (entity_t *ent)
 	{ //rww - since these things go through passes for so many things, only do a cull check once per frame
 		return;
 	}
+
+	if (gl_fogenable.value)
+		glEnable(GL_FOG);
 
 	if (ISTRANSPARENT(ent))
 	{
@@ -1529,6 +1539,9 @@ void R_DrawBrushModel (entity_t *ent)
 	R_DrawAlphaChain ();
 
 	glPopMatrix ();
+
+	if (gl_fogenable.value)
+		glDisable(GL_FOG);
 
 	if (ISTRANSPARENT(ent))
 	{
@@ -1786,6 +1799,12 @@ int AllocBlock (int w, int h, int *x, int *y)
 {
 	int	i, j, best, best2, texnum;
 
+	// ericw -- rather than searching starting at lightmap 0 every time,
+	// start at the last lightmap we allocated a surface in.
+	// This makes AllocBlock much faster on large levels (can shave off 3+ seconds
+	// of load time on a level with 180 lightmaps), at a cost of not quite packing
+	// lightmaps as tightly vs. not doing this (uses ~5% more lightmaps)
+
 	for (texnum=last_lightmap_allocated ; texnum<MAX_LIGHTMAPS ; texnum++, last_lightmap_allocated++)
 //	for (texnum=0 ; texnum<MAX_LIGHTMAPS ; texnum++)
 	{
@@ -1847,7 +1866,8 @@ void BuildSurfaceDisplayList (msurface_t *fa)
 	vertpage = 0;
 
 	// draw texture
-	poly = Hunk_AllocName (sizeof(glpoly_t) + (lnumverts - 4) * VERTEXSIZE * sizeof(float),"glpoly_t");
+	//poly = Hunk_AllocName (sizeof(glpoly_t) + (lnumverts - 4) * VERTEXSIZE * sizeof(float),"glpoly_t");
+	poly = MallocZ (sizeof(glpoly_t) + (lnumverts - 4) * VERTEXSIZE * sizeof(float));
 	poly->next = fa->polys;
 	fa->polys = poly;
 	poly->numverts = lnumverts;
@@ -1922,7 +1942,6 @@ void GL_CreateSurfaceLightmap (msurface_t *surf)
 
 	if (surf->flags & (SURF_DRAWSKY | SURF_DRAWTURB))
 		return;
-
 	smax = (surf->extents[0] >> 4) + 1;
 	tmax = (surf->extents[1] >> 4) + 1;
 
@@ -1932,6 +1951,7 @@ void GL_CreateSurfaceLightmap (msurface_t *surf)
 		Host_Error ("GL_CreateSurfaceLightmap: tmax = %d > LIGHTMAP_BLOCK_HEIGHT", tmax);
 	if (smax * tmax > 49152)
 		Host_Error ("GL_CreateSurfaceLightmap: smax * tmax = %d > MAX_LIGHTMAP_SIZE", smax * tmax);
+
 
 	surf->lightmaptexturenum = AllocBlock (smax, tmax, &surf->light_s, &surf->light_t);
 	
@@ -1981,8 +2001,9 @@ void GL_BuildLightmaps (void)
 
 		for (i=0 ; i<m->numsurfaces ; i++)
 		{
-			if (m->surfaces[i].flags & (SURF_DRAWTURB | SURF_DRAWSKY))
+			if (m->surfaces[i].flags & SURF_DRAWTILED)
 				continue;
+	
 			GL_CreateSurfaceLightmap (m->surfaces + i);
 			BuildSurfaceDisplayList (m->surfaces + i);
 		}

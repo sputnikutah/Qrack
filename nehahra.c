@@ -265,7 +265,7 @@ void Neh_Init (void)
 	Cvar_RegisterVariable (&nehx19);
 	Cvar_RegisterVariable (&cutscene);
 
-//	Cvar_Set ("gl_hwblend", "0");
+	Cvar_Set ("gl_hwblend", "0");
 
 	Cmd_AddLegacyCommand ("pausedemo", "pause");
 

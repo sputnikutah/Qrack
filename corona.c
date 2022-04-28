@@ -54,11 +54,6 @@ void R_DrawCorona (entity_t *e)
 	if (gl_coronas.value < 1)
 		return;
 
-	if (gl_fogenable.value)
-	{
-		glDisable(GL_FOG);
-	}	
-
 	f = (corona_t*)e->corona;
 
 	VectorAdd(e->origin, f->offset, org);
@@ -85,7 +80,15 @@ void R_DrawCorona (entity_t *e)
 	}
 
 	if(!alpha)
-	return;
+	{
+		return;
+	}
+
+
+	if (gl_fogenable.value)
+	{
+		glDisable(GL_FOG);
+	}	
 
 	VectorCopy(vup, up);
 	VectorCopy(vright, right);
@@ -155,7 +158,7 @@ void R_DrawCorona (entity_t *e)
 	glColor4f(1,1,1,1);
 
 	if (gl_fogenable.value)
-	glEnable(GL_FOG);
+		glEnable(GL_FOG);
 } 
 
 // Draws all coronas

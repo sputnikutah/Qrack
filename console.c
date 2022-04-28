@@ -72,8 +72,8 @@ extern	char	key_lines[64][MAXCMDLINE];
 extern	int	edit_line;
 extern	int	key_linepos;
 extern	int	key_insert;
-extern void ClearAllStates (void);		
-extern qboolean cl_mm2;//R00k added for cl_mute
+extern void ClearAllStates (void);	
+extern qboolean cl_mm2;//R00k added for cl_mute	
 
 qboolean	con_initialized = false;
 char logfilename[128];	// JPG - support for different filenames
@@ -516,13 +516,13 @@ void Con_Print (char *txt)
 	int		y, c, l, mask;
 	static int	cr;
 	static int fixline = 0;	
-	static char szOldText[16384];
-
+	
 	//sschm 3/2/2017 3:34PM
 	if (con_nomsgdupe.value)
 	{		
 		if (txt[0])
 		{
+			static char szOldText[16384];
 			if (szOldText[0])
 			{
 				if (!_stricmp(szOldText, txt))
@@ -813,7 +813,6 @@ void Con_Warning (const char *fmt, ...)
 
 	if (!developer.value)
 		return;			
-
 
 	va_start (argptr, fmt);
 	vsprintf (msg, fmt, argptr);

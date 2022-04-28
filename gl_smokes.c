@@ -14,7 +14,7 @@ float s_frametime;
 
 
 // keep this high enough to kill framerate dependency as much as possible
-#define NUM_SMOKE_PARTICLES 256//was 1024
+#define NUM_SMOKE_PARTICLES 1024
 #define LAVA_SMOKE_SCALE 12
 
 float PRGB[3][256];
@@ -353,7 +353,7 @@ void R_SmokeFrame (void)
 	msurface_t *surf;
 	glpoly_t *p;
 	char *name;
-	vec3_t	distance;
+	//vec3_t	distance;
 
 	if (!particle_mode)
 	return;
@@ -392,10 +392,10 @@ void R_SmokeFrame (void)
 		for (p = surf->polys; p; p = p->next)
 		{
 			//R00k added distance checking, default 512
-			VectorSubtract(r_refdef.vieworg,p->midpoint, distance);
+///			VectorSubtract(r_refdef.vieworg,p->midpoint, distance);
 
-			if (VectorLength(distance) > r_farclip.value)
-			continue;
+//			if (VectorLength(distance) > r_farclip.value)
+//			continue;
 
 			if (name[1] == 'l' && name[2] == 'a' && name[3] == 'v' && name[4] == 'a')
 			{
@@ -421,7 +421,7 @@ void R_SmokeFrame (void)
 		if (!(name[6] == 'f' && name[7] == 'l' && name[8] == 'a' && name[9] == 'm' && name[10] == 'e'))
 		continue;
 
-		R_TorchSmoke (cl_visedicts[i]->origin, 14);
+		R_TorchSmoke (cl_visedicts[i]->origin, 12);//FIXME: LOWER FOR BIGGER flames
 	}
 
 	glEnd ();

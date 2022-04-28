@@ -34,6 +34,7 @@ void S_SoundList_f (void);
 void S_Update_ ();
 void S_StopAllSounds (qboolean clear);
 void S_StopAllSounds_f (void);
+void SNDDMA_Restart_f(void);
 
 // =======================================================================
 // Internal sound data & structures
@@ -55,8 +56,8 @@ vec3_t	listener_up;
 
 #define sound_nominal_clip_dist 1500//PQ upped this was 1000.. sigh.
 										
-int	soundtime;		// sample PAIRS
-int   	paintedtime; 		// sample PAIRS
+int		soundtime;		// sample PAIRS
+int   	paintedtime; 	// sample PAIRS
 
 
 sfx_t	*known_sfx;		// hunk allocated [MAX_SFX]
@@ -79,6 +80,7 @@ cvar_t	bgmbuffer		= {"bgmbuffer", "4096"};
 cvar_t	ambient_fade	= {"ambient_fade", "100"};
 cvar_t	snd_show		= {"snd_show", "0"};
 cvar_t	_snd_mixahead	= {"_snd_mixahead", "0.1", true};
+cvar_t	snd_nofocusblock= {"snd_nofocusblock", "1", true};//R00k: determine if sounds should be blocked or not when app loses focus.
 
 qboolean OnChange_ambient_level (cvar_t *var, char *string);
 cvar_t	ambient_level	= {"ambient_level", "0.3", true, false, OnChange_ambient_level};
@@ -97,7 +99,7 @@ qboolean OnChange_ambient_level (cvar_t *var, char *string)
 }
 
 cvar_t	snd_noextraupdate = {"snd_noextraupdate", "0"};
-//cvar_t	s_khz = {"s_khz", "11", true};
+cvar_t	s_khz = {"snd_khz", "48", true};
 
 // ====================================================================
 // User-setable variables
@@ -118,14 +120,15 @@ void S_SoundInfo_f (void)
 		return;
 	}
 
-	Con_Printf ("%5d stereo\n", shm->channels - 1);
-	Con_Printf ("%5d samples\n", shm->samples);
-	Con_Printf ("%5d samplepos\n", shm->samplepos);
-	Con_Printf ("%5d samplebits\n", shm->samplebits);
-	Con_Printf ("%5d submission_chunk\n", shm->submission_chunk);
-	Con_Printf ("%5d speed\n", shm->speed);
-	Con_Printf ("0x%x dma buffer\n", shm->buffer);
-	Con_Printf ("%5d total_channels\n", total_channels);
+	Con_Printf("%d bit, %s, %d Hz\n", shm->samplebits,(shm->channels == 2) ? "stereo" : "mono", shm->speed);
+	Con_Printf("%5d stereo\n", shm->channels - 1);
+	Con_Printf("%5d samples\n", shm->samples);
+	Con_Printf("%5d samplepos\n", shm->samplepos);
+	Con_Printf("%5d samplebits\n", shm->samplebits);
+	Con_Printf("%5d submission_chunk\n", shm->submission_chunk);
+	Con_Printf("%5d speed\n", shm->speed);
+	Con_Printf("0x%x dma buffer\n", shm->buffer);
+	Con_Printf("%5d total_channels\n", total_channels);
 }
 
 /*
@@ -153,6 +156,8 @@ void S_Startup (void)
 		}
 	}
 
+	Con_Printf("Audio: %d bit, %s, %d Hz\n", shm->samplebits, (shm->channels == 2) ? "stereo" : "mono", shm->speed);
+
 	sound_started = 1;
 }
 
@@ -177,6 +182,7 @@ void S_Init (void)
 	Cmd_AddCommand ("stopsound", S_StopAllSounds_f);
 	Cmd_AddCommand ("soundlist", S_SoundList_f);
 	Cmd_AddCommand ("soundinfo", S_SoundInfo_f);
+	Cmd_AddCommand ("soundrestart", SNDDMA_Restart_f);
 
 	Cvar_RegisterVariable (&nosound);
 	Cvar_RegisterVariable (&volume);
@@ -189,8 +195,8 @@ void S_Init (void)
 	Cvar_RegisterVariable (&snd_noextraupdate);
 	Cvar_RegisterVariable (&snd_show);
 	Cvar_RegisterVariable (&_snd_mixahead);
-//	Cvar_RegisterVariable (&s_khz);
-
+	Cvar_RegisterVariable (&s_khz);
+	Cvar_RegisterVariable (&snd_nofocusblock);//R00k
 	if (host_parms.memsize < 0x800000)
 	{
 		Cvar_Set ("snd_loadas8bit", "1");
@@ -223,7 +229,7 @@ void S_Init (void)
 		shm->buffer = Hunk_AllocName(1<<16, "shmbuf");
 	}
 
-	Con_Printf ("Sound sampling rate: %i Hz\n", shm->speed);
+//	Con_Printf ("Sound sampling rate: %i Hz\n", shm->speed);
 
 	// provides a tick sound until washed clean
 

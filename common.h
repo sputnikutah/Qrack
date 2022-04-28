@@ -159,6 +159,8 @@ void Q_strncpyz (char *dest, char *src, size_t size);
 int Q_strncpy (char *dest, int bufsize, const char *src, int count);
 char *Q_strstr (const char *s1, const char *s2);
 void Q_snprintfz (char *dest, size_t size, char *fmt, ...);
+int Q_strcmp (const char *s1, const char *s2);
+char *q_strcasestr(const char *haystack, const char *needle);
 
 //============================================================================
 
@@ -237,5 +239,5 @@ extern	struct	cvar_s	registered;
 extern	int	rogue, hipnotic, nehahra, quoth;
 
 #if defined(_WIN32)
-size_t strlcpy(char *dst, char *src, size_t siz);
+size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif

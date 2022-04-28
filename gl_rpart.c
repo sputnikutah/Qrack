@@ -19,6 +19,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // gl_rpart.c
 
+//FIXME FRAMETIME INDEPENDENT UPDATES!! ONLY UPDATE PARTICLES AT 72FPS DONT OVERDRAW!~!
+
 #include "quakedef.h"
 
 //#define	DEFAULT_NUM_PARTICLES		8192
@@ -429,6 +431,7 @@ void QMB_InitParticles (void)
 
 	if (!(particleimage = GL_LoadTextureImage("textures/particles/dirt", "qmb:dirt", 0, 0, TEX_MIPMAP | TEX_ALPHA | TEX_COMPLAIN)))
 		return;
+
 	ADD_PARTICLE_TEXTURE(ptex_chunk, particleimage, 0, 1, 0, 0, 256, 256);
 
 //	ADD_PARTICLE_TYPE(_id,				_drawtype,			_SrcBlend,		_DstBlend,				_texture,	_startalpha,	_grav, _accel,  _move,			_custom)\	
@@ -761,7 +764,7 @@ __inline static void AddParticleTrail (part_type_t type, vec3_t start, vec3_t en
 	if (!(num_particles = (int)count))
 		num_particles = 1;
 
-	VectorScale(delta, 1.0 / num_particles, delta);
+	VectorScale(delta, 1 / num_particles, delta);
 
 	for (i=0 ; i < num_particles && free_particles ; i++)
 	{
@@ -870,6 +873,11 @@ void QMB_ClearParticles (void)
 		particle_types[i].start = NULL;
 }
 
+void QMB_RainSplash (vec3_t org)
+{	
+	AddParticle (p_smoke, org, 1, 1, 0.2, NULL, vec3_origin);//R00k: shh, i know it's a smoke particle...
+}
+
 _inline static void QMB_UpdateParticles(void)
 {
 	int		i, c;
@@ -882,7 +890,7 @@ _inline static void QMB_UpdateParticles(void)
 	if (!qmb_initialized)
 		return;
 
-	frametime = fabs(cl.ctime - cl.oldtime);
+	frametime = fabs(cl.time - cl.oldtime);
 
 	particle_count = 0;
 	grav = sv_gravity.value / 800.0;
@@ -1113,6 +1121,9 @@ _inline static void QMB_UpdateParticles(void)
 	
 					if ((CONTENTS_SOLID == c) || (ISUNDERWATER(c)))
 					{		
+						if ((rand()%3) > 1)
+							QMB_RainSplash (p->org);
+
 						VectorClear (p->vel);
 						p->die = 0;
 					}
@@ -1389,7 +1400,7 @@ void QMB_LetItRain(void)
 		return;
 	}
 
-	cl.rain_time = cl.time + 0.025;
+	cl.rain_time = cl.time + 0.05;//change to ticrate
 	
 	color[0] =  color[1] = color[2] = + (rand() % 25 + 15);
 	color[2] += 5;
@@ -2206,7 +2217,6 @@ void QMB_LaserSight (void)
 	extern cvar_t	v_viewheight;
 	extern cvar_t	cl_gun_offset;
 	extern cvar_t	cl_maxfps;
-	extern cvar_t	host_maxfps;
 	
 	vec3_t	dest, start, forward, right, up;
 	trace_t	trace;
@@ -2220,10 +2230,7 @@ void QMB_LaserSight (void)
 		return;
 	}
 	
-	if (sv.active)
-		fpstime = (1.0 / host_maxfps.value);
-	else
-		fpstime = (1.0 / cl_maxfps.value);
+	fpstime = (1.0 / cl_maxfps.value);
 
 	if (frametime > fpstime)
 	{	
@@ -2323,7 +2330,6 @@ void QMB_CullTraceHighlight (void)
 	extern cvar_t	v_viewheight;
 	extern cvar_t	cl_gun_offset;
 	extern cvar_t	cl_maxfps;
-	extern cvar_t	host_maxfps;
 	
 	vec3_t	dest, start, forward, right, up;
 	trace_t	trace;

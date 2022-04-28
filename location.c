@@ -142,7 +142,7 @@ void LOC_EndPoint_f (void)
 	VectorClear(temploc->mins);
 }
 
-void LOC_LoadLocations (void)
+qboolean LOC_LoadLocations (void)
 {
 	char	filename[MAX_OSPATH];
 	vec3_t	mins, maxs;	
@@ -154,8 +154,8 @@ void LOC_LoadLocations (void)
 
 	if (cls.state != ca_connected || !cl.worldmodel)
 	{
-		Con_Printf("!error: No map loaded!\n");
-		return;
+		Con_Printf("!LOC_LoadLocations ERROR: No map loaded!\n");
+		return false;
 	}
 
 	//LOC_Init();
@@ -169,7 +169,7 @@ void LOC_LoadLocations (void)
 	if (COM_FindFile(filename) == false)
 	{
 		Con_DPrintf (1,"%s not found.\n", filename);
-		return;
+		return false;
 	}
 
 	filedata = (char *)COM_LoadFile (filename, 0);
@@ -177,7 +177,7 @@ void LOC_LoadLocations (void)
 	if (!filedata)
 	{
 		Con_Printf("%s contains empty or corrupt data.\n", filename);
-		return;
+		return false;
 	}
 
 	filesize = strlen(filedata);
@@ -250,6 +250,7 @@ void LOC_LoadLocations (void)
 		else
 			continue;
 	}
+	return true;
 }
 
 void LOC_Save_f (void)
@@ -270,11 +271,9 @@ void LOC_Save_f (void)
 		return;
 	}
 
-	Q_snprintfz (filename, sizeof(filename), "locs/%s", sv_mapname.string);
+	Q_snprintfz (filename, sizeof(filename),"%s/locs/%s.%s", com_gamedir, sv_mapname.string, "loc");
 
-	COM_ForceExtension (filename, ".loc");
-
-	if (!(f = fopen (filename, "wt")))
+	if (!(f = fopen(filename, "wt")))
 	{
 		Con_Printf("!error: Cannot write (%s) file!\n",filename);
 		return;
@@ -289,7 +288,7 @@ void LOC_Save_f (void)
 			fprintf (f, "%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,\"%s\"\n", loc->mins[0], loc->mins[1], loc->mins[2], loc->maxs[0], loc->maxs[1], loc->maxs[2], loc->name);
 		}
 	}
-	Con_Printf("%s saved\n",filename);
+	Con_Printf("%s saved.\n",filename);
 	fclose (f);
 }
 

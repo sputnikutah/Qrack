@@ -77,44 +77,44 @@ int		glx, gly, glwidth, glheight;
 int		scr_copytop;
 int		scr_copyeverything;
 
-float		scr_con_current;
-float		scr_conlines;		// lines of console to display
+float	scr_con_current;
+float	scr_conlines;		// lines of console to display
 
-float		oldscreensize;
-float		oldfov = 90;
-cvar_t		scr_viewsize			= {"viewsize", "100", true};
-cvar_t		scr_fov					= {"fov", "90"};				// 10 - 170
-cvar_t		scr_fovspeed			= {"fov_speed", "10"};			//R00k
-cvar_t		scr_fovcompat			= {"scr_fovcompat","0"};		//MH
-cvar_t      scr_consize				= {"scr_consize", "0.5"};		// by joe
-cvar_t		scr_conspeed			= {"scr_conspeed", "2000"};
-cvar_t		scr_centertime			= {"scr_centertime", "3"};
-cvar_t		scr_showram				= {"showram", "0"};
-cvar_t		scr_showturtle			= {"showturtle", "0"};
-cvar_t		scr_showpause			= {"showpause", "1"};
-cvar_t		scr_printspeed			= {"scr_printspeed", "8"};
-cvar_t		scr_drawautoids			= {"scr_drawautoids","1"};
+float	oldscreensize;
+float	oldfov = 90;
+cvar_t	scr_viewsize			= {"viewsize", "100", true};
+cvar_t	scr_fov					= {"fov", "90"};				// 10 - 170
+cvar_t	scr_fovspeed			= {"fov_speed", "10"};			//R00k
+cvar_t	scr_fovcompat			= {"scr_fovcompat","0"};		//MH
+cvar_t  scr_consize				= {"scr_consize", "0.5"};		// by joe
+cvar_t	scr_conspeed			= {"scr_conspeed", "2000"};
+cvar_t	scr_centertime			= {"scr_centertime", "3"};
+cvar_t	scr_showram				= {"showram", "0"};
+cvar_t	scr_showturtle			= {"showturtle", "0"};
+cvar_t	scr_showpause			= {"showpause", "1"};
+cvar_t	scr_printspeed			= {"scr_printspeed", "8"};
+cvar_t	scr_drawautoids			= {"scr_drawautoids","1"};
+cvar_t	scr_drawautoids_obs		= {"scr_drawautoids_obs","0"};
 #ifdef GLQUAKE
-cvar_t		gl_triplebuffer			= {"gl_triplebuffer", "0", true};
-cvar_t		png_compression_level	= {"png_compression_level", "1"};
-cvar_t		jpeg_compression_level	= {"jpeg_compression_level", "75"};
+cvar_t	gl_triplebuffer			= {"gl_triplebuffer", "0", true};
+cvar_t	png_compression_level	= {"png_compression_level", "1"};
+cvar_t	jpeg_compression_level	= {"jpeg_compression_level", "75"};
 #endif
-cvar_t		scr_sshot_type			= {"scr_sshot_type", "jpg"};
+cvar_t	scr_sshot_type			= {"scr_sshot_type", "jpg"};
 
-cvar_t		scr_centerprint_levelname = {"scr_centerprint_levelname","1", true};
+cvar_t	scr_centerprint_levelname = {"scr_centerprint_levelname","1", true};
 
 qboolean	scr_initialized;		// ready to draw
 
-mpic_t          *scr_ram;
-mpic_t          *scr_net; 
-mpic_t          *scr_turtle;
+mpic_t	*scr_ram;
+mpic_t	*scr_net; 
+mpic_t	*scr_turtle;
 
-int			scr_fullupdate;
+int		scr_fullupdate;
+int		clearconsole;
+int		clearnotify;
 
-int			clearconsole;
-int			clearnotify;
-
-int			sb_lines;
+int		sb_lines;
 	
 viddef_t	vid;				// global video state
 
@@ -291,7 +291,6 @@ float SCR_CalcFovY (float fov_x, float width, float height)
 //From MH - DirectQ
 void SCR_SetFOV (float *fovx, float *fovy, float fovvar, int width, int height)
 {
-	extern cvar_t vid_force_aspect_ratio;
 	float aspect = (float) height / (float) width;
 	float baseheight = (cl_sbar.value ? 480.0f : 432.0f);
 
@@ -453,6 +452,7 @@ void SCR_Init (void)
 	Cvar_RegisterVariable (&scr_sshot_type);
 	Cvar_RegisterVariable (&scr_centerprint_levelname);
 	Cvar_RegisterVariable (&scr_drawautoids);
+	Cvar_RegisterVariable (&scr_drawautoids_obs);
 
 #ifdef GLQUAKE
 	Cvar_RegisterVariable (&png_compression_level);
@@ -604,14 +604,14 @@ void SCR_SetUpToDrawConsole (void)
 
 	if (scr_conlines < scr_con_current)
 	{
-		scr_con_current -= scr_conspeed.value * host_frametime * vid.height / 320;
+		scr_con_current -= scr_conspeed.value * vid.height / 320;
 		if (scr_conlines > scr_con_current)
 			scr_con_current = scr_conlines;
 
 	}
 	else if (scr_conlines > scr_con_current)
 	{
-		scr_con_current += scr_conspeed.value * host_frametime * vid.height / 320;
+		scr_con_current += scr_conspeed.value * vid.height / 320;
 		if (scr_conlines < scr_con_current)
 			scr_con_current = scr_conlines;
 	}
@@ -743,7 +743,7 @@ void SCR_ScreenShot_f (void)
 	}
 
 	success = SCR_ScreenShot (va("%s/%s", sshot_dir, name));
-	Con_Printf ("%s %s\n", success ? "Wrote" : "Couldn't write", name);
+	Con_Printf ("%s%s\n", success ? "ScreenShot saved to qrack/screenshots/" : "FAILED saving ", name);
 } 
 
 
@@ -898,8 +898,8 @@ int qglProject (float objx, float objy, float objz, float *model, float *proj, i
 	org[0] = objx; org[1] = objy; org[2] = objz;
 	in[0] = objx; in[1] = objy; in[2] = objz; in[3] = 1.0;
 
-	if (R_CullSphere (org, 1))
-		return 0;
+//	if (R_CullSphere (org, 1))
+//		return 0;
 
 	dist = VectorDistance(r_refdef.vieworg, org);	
 
@@ -958,18 +958,18 @@ void SCR_DrawAutoIds (void)
 		y =  (glheight - autoids[i].y) * vid.height / glheight;
 
 //		Draw_String_Scaled (x - strlen(va("%i",autoids[i].player->frags)) * 4 * (autoids[i].scale * 1), y - 8 * (autoids[i].scale * 1), va("%i",autoids[i].player->frags), (autoids[i].scale * 1));
-		Draw_String_Scaled (x - strlen(autoids[i].player->name) * 4 * (autoids[i].scale * 0.6), y + 0  * (autoids[i].scale * 0.6), autoids[i].player->name, (autoids[i].scale * 1));
+		Draw_String_Scaled (x - strlen(autoids[i].player->name) * 4 * (autoids[i].scale * 0.6), y + 0  * (autoids[i].scale * 0.6), autoids[i].player->name, 1);//(autoids[i].scale * 1));
 //		Draw_String_Scaled (x - strlen(va("%i",autoids[i].player->ping)) * 4 * (autoids[i].scale * 0.8), y + 24  * (autoids[i].scale * 0.8), va("%i",autoids[i].player->ping), (autoids[i].scale * 0.8));//pING		
 	}
 }
 
 void SCR_SetupAutoID (void) 
 {
-    int				i, view[4];
-    float			model[16], project[16];
-	vec3_t			origin;
-    entity_t		*state;
-    autoid_player_t *id;
+	int		i, view[4];
+	float		model[16], project[16];
+	vec3_t		origin;
+	entity_t	*state;
+	autoid_player_t *id;
 	float frametime = fabs(cl.mtime[0] - cl.mtime[1]);
 
 	if (frametime < (1/cl_maxfps.value)/2)
@@ -978,13 +978,13 @@ void SCR_SetupAutoID (void)
 	autoid_count = 0;
 	memset(&autoids, 0, sizeof(autoids));//needed?
 
-    glGetFloatv (GL_MODELVIEW_MATRIX, model);
-    glGetFloatv (GL_PROJECTION_MATRIX, project);
-    glGetIntegerv (GL_VIEWPORT, view);
+	glGetFloatv (GL_MODELVIEW_MATRIX, model);
+	glGetFloatv (GL_PROJECTION_MATRIX, project);
+	glGetIntegerv (GL_VIEWPORT, view);
 
-    for (i = 0; i < cl.maxclients; i++) 
+	for (i = 0; i < cl.maxclients; i++) 
 	{
-        state = &cl_entities[1 + i];
+		state = &cl_entities[1 + i];
 
 		if (state->culled)
 			continue;
@@ -992,24 +992,24 @@ void SCR_SetupAutoID (void)
 		if (!state->model)
 			continue;
 
-		if (state->modelindex == cl_modelindex[mi_eyes])
+//		if (state->modelindex == cl_modelindex[mi_eyes])
+//			continue;
+
+		if ((scr_drawautoids_obs.value == 0)&&(state->shirtcolor == 0 && state->pantscolor == 0))//R00k: no names on observers, unless scr_drawautoids_obs set!
 			continue;
 
-		if (state->shirtcolor == 0 && state->pantscolor == 0)//R00k: no names on observers!
-			continue;
-
-        id = &autoids[autoid_count];
-        id->player = &cl.scores[i];
+		id = &autoids[autoid_count];
+		id->player = &cl.scores[i];
 
 		VectorCopy(state->origin, origin);
 
 		origin[2] += 45;// cvar this?
 
-        if (qglProject (origin[0], origin[1], origin[2], model, project, view, &id->x, &id->y, &id->scale))
+		if (qglProject (origin[0], origin[1], origin[2], model, project, view, &id->x, &id->y, &id->scale))
 		{
-            autoid_count++;
+			autoid_count++;
 		}
-    }
+	}
 	Q_free(state);
 }
 
@@ -1258,6 +1258,9 @@ void SCR_UpdateScreen (void)
 	extern cvar_t	scr_clock;
 	float alpha;
 	extern	cvar_t developer_tool_show_edict_tags;
+	#ifdef USESHADERS
+	extern void GL_PolyBlend (void);	
+	#endif
 
 	if (isDedicated)//R00k
 		return;
@@ -1333,10 +1336,14 @@ void SCR_UpdateScreen (void)
 	
 	V_RenderView ();
 
-
 	GL_Set2D ();
 
-	if (gl_polyblend.value < 2) //R00k: 2 = use shader
+#ifdef USESHADERS
+	if (gl_polyblend.value == 2)// uses MH's shader, sometimes its glitchy
+		GL_PolyBlend ();
+#endif
+
+	if (gl_polyblend.value == 1) //R00k: 2 = use shader
 		R_PolyBlend ();	// added by joe - IMPORTANT: this _must_ be here so that palette flashes take effect in windowed mode too.
 
 	// draw any areas not covered by the refresh
@@ -1345,7 +1352,7 @@ void SCR_UpdateScreen (void)
 	if (scr_drawdialog)
 	{
 		Sbar_Draw ();
-		Draw_FadeScreen ();
+		Draw_FadeScreen (); 
 		SCR_DrawNotifyString ();
 		scr_copyeverything = true;
 	}
@@ -1395,8 +1402,7 @@ void SCR_UpdateScreen (void)
 		Sbar_Draw ();
 		SCR_DrawConsole ();	
 		
-//		if (key_dest == key_menu)//Testing; shadowplay is flickering the menu !! :(
-			M_Draw ();
+		M_Draw ();
 
 		if ((developer.value && developer_tool_show_edict_tags.value))
 		{
@@ -1424,6 +1430,5 @@ void SCR_UpdateScreen (void)
 #ifdef _WIN32
 	Movie_UpdateScreen ();
 #endif
-
 	GL_EndRendering ();
 }

@@ -201,29 +201,17 @@ void SV_AirAccelerate (vec3_t wishveloc)
 		velocity[i] += accelspeed*wishveloc[i];	
 }
 
-float	punchangle = 0;
-
 void DropPunchAngle (void)
 {
-	if (sv_player->v.punchangle[0] < punchangle)
-	{
-		if (sv_player->v.punchangle[0] == -2)	// small kick
-			punchangle -= 20 * host_frametime;
-		else					// big kick
-			punchangle -= 40 * host_frametime;
+	float	len;
 
-		if (punchangle < sv_player->v.punchangle[0])
-		{
-			punchangle = sv_player->v.punchangle[0];
-			sv_player->v.punchangle[0] = 0;
-		}
-	}
-	else
-	{
-		punchangle += 20 * host_frametime;
-		if (punchangle > 0)
-			punchangle = 0;
-	}
+	len = VectorNormalize (sv_player->v.punchangle);
+
+	len -= 10 * host_frametime;
+	if (len < 0)
+		len = 0;
+
+	VectorScale (sv_player->v.punchangle, len, sv_player->v.punchangle);
 }
 /*
 ===================
@@ -399,7 +387,7 @@ void SV_ClientThink (void)
 	if ((int)sv_player->v.flags & FL_WATERJUMP)
 	{
 		SV_WaterJump ();
-		return;
+		return; 
 	}
 // walk
 	if ((sv_player->v.waterlevel >= 2) && (sv_player->v.movetype != MOVETYPE_NOCLIP))
@@ -542,6 +530,7 @@ nextmsg:
 					!Q_strncasecmp(s, "fly", 3)	||
 					!Q_strncasecmp(s, "give", 4)	||
 					!Q_strncasecmp(s, "noclip", 6)	||
+//					!Q_strncasecmp(s, "ignore", 6)	|| //R00k: mute this client from talking in mm1
 				// nehahra specific
 					!Q_strncasecmp(s, "max", 3)	||
 					!Q_strncasecmp(s, "monster", 7)	||

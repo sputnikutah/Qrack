@@ -123,6 +123,45 @@ void InsertLinkAfter (link_t *l, link_t *after)
 
 ============================================================================
 */
+//spike -- grabbed this from fte, because its useful to me
+char *q_strcasestr(const char *haystack, const char *needle)
+{
+	int c1, c2, c2f;
+	int i;
+	c2f = *needle;
+	if (c2f >= 'a' && c2f <= 'z')
+		c2f -= ('a' - 'A');
+	if (!c2f)
+		return (char*)haystack;
+	while (1)
+	{
+		c1 = *haystack;
+		if (!c1)
+			return NULL;
+		if (c1 >= 'a' && c1 <= 'z')
+			c1 -= ('a' - 'A');
+		if (c1 == c2f)
+		{
+			for (i = 1; ; i++)
+			{
+				c1 = haystack[i];
+				c2 = needle[i];
+				if (c1 >= 'a' && c1 <= 'z')
+					c1 -= ('a' - 'A');
+				if (c2 >= 'a' && c2 <= 'z')
+					c2 -= ('a' - 'A');
+				if (!c2)
+					return (char*)haystack;	//end of needle means we found a complete match
+				if (!c1)	//end of haystack means we can't possibly find needle in it any more
+					return NULL;
+				if (c1 != c2)	//mismatch means no match starting at haystack[0]
+					break;
+			}
+		}
+		haystack++;
+	}
+	return NULL;	//didn't find it
+}
 
 void Q_strncatz (char *dst, const char *src, int dstSize)
 {
@@ -196,7 +235,7 @@ int Q_memcmp (void *m1, void *m2, int count)
 }
 
 #if defined(__linux__) || defined(_WIN32)
-size_t strlcpy(char *dst, char *src, size_t siz)
+size_t strlcpy(char *dst, const char *src, size_t siz)
 {
 	register char *d = dst;
 	register const char *s = src;
@@ -403,6 +442,21 @@ void Q_snprintfz (char *dest, size_t size, char *fmt, ...)
 	va_end (argptr);
 
 	dest[size - 1] = 0;
+}
+
+int Q_strcmp (const char *s1, const char *s2)
+{
+	while (1)
+	{
+		if (*s1 != *s2)
+			return -1;		// strings not equal
+		if (!*s1)
+			return 0;		// strings are equal
+		s1++;
+		s2++;
+	}
+
+	return -1;
 }
 
 /*
@@ -1802,6 +1856,7 @@ void COM_SetGameDir (char *dir)
 	//R00k---
 	Draw_InitConback(); //Refresh the console background for singleplayer support.
 	Draw_InitCharset();
+	Cache_Flush();
 	//reload textures?
 	
 	if (COM_FindFile("config.cfg"))
@@ -1809,8 +1864,6 @@ void COM_SetGameDir (char *dir)
 
 	SCR_UpdateScreen();
 	cls.demonum = -1;
-
-	//todo: Cbuf_AddText ("lastconnect\n");//Reconnect to server, possibly for coop/ctf/etc. ?
 }
 /*
 ================
@@ -1853,6 +1906,11 @@ void COM_Gamedir_f (void)
 	}
 
 	COM_SetGameDir (dir);
+
+	if (cls.state != ca_disconnected)
+	{
+		Cbuf_AddText ("lastconnect\n");//Reconnect to server, possibly for coop/ctf/etc. ?
+	}
 }
 
 /*
@@ -1864,13 +1922,15 @@ void COM_InitFilesystem (void)
 {
 	int	i;
 
+	Cmd_AddCommand ("game", COM_Gamedir_f); //Quakespasm/FitzQuake compatible.
+
 // -basedir <path>
 // Overrides the system supplied base directory (under GAMENAME)
 	if ((i = COM_CheckParm("-basedir")) && i + 1 < com_argc)
 		Q_strncpyz (com_basedir, com_argv[i+1], sizeof(com_basedir));
 	else
 		Q_strncpyz (com_basedir, host_parms.basedir, sizeof(com_basedir));
-
+		
 	for (i=0 ; i < strlen(com_basedir) ; i++)
 		if (com_basedir[i] == '\\')
 			com_basedir[i] = '/';
@@ -1882,6 +1942,9 @@ void COM_InitFilesystem (void)
 	// start up with GAMENAME by default (id1)
 	COM_AddGameDirectory (va("%s/"GAMENAME, com_basedir));
 	COM_AddGameDirectory (va("%s/qrack", com_basedir));
+
+	// any set gamedirs will be freed up to here
+	com_base_searchpaths = com_searchpaths;
 
 	if (COM_CheckParm("-rogue"))
 		COM_AddGameDirectory (va("%s/rogue", com_basedir));
@@ -1896,9 +1959,6 @@ void COM_InitFilesystem (void)
 
 	if (COM_CheckParm("-quoth"))
 		COM_AddGameDirectory (va("%s/quoth", com_basedir));
-
-	// any set gamedirs will be freed up to here
-	com_base_searchpaths = com_searchpaths;
 
 // -game <gamedir>
 // Adds basedir/gamedir as an override game

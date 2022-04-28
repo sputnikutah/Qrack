@@ -48,9 +48,12 @@ static int				(F_API *qFSOUND_Stream_Play)(int channel, FSOUND_STREAM *);
 static signed char		(F_API *qFSOUND_Stream_Stop)(FSOUND_STREAM *);
 
 qboolean fmod_loaded;				//This means we found the .dll and it's loaded and initialized.
-qboolean fmod_enabled	= false;	//This is a toggle for the end user to enable or disable the whole shabang.
+
 qboolean modplaying		= false;
 qboolean streamplaying	= false;
+
+static qboolean OnChange_fmod_music(cvar_t *var, char *string);
+cvar_t	fmod_music = { "fmod_music", "1", 1, 0, OnChange_fmod_music };	
 
 #ifdef _WIN32
 #define FSOUND_GETFUNC(f, g) (qFSOUND_##f = (void *)GetProcAddress(fmod_handle, "_FSOUND_" #f #g))
@@ -208,7 +211,7 @@ void FMOD_Stop_Stream_f (void)
 
 void FMOD_Play_Stream_f (char *streamname)
 {
-	if (fmod_enabled == false)
+	if (fmod_music.value < 1)
 		return;
 
 	if (qFSOUND_Stream_Open)
@@ -234,7 +237,7 @@ void FMOD_Play_Stream_f (char *streamname)
 		return;
 	}
 	streamplaying = true;
-	Con_Printf ("playing %s\n", streamname);
+	Con_DPrintf (1, "playing %s\n", streamname);
 }
 
 //todo fix this so we can use .ogg/mp3 in the sounds folder too
@@ -258,6 +261,7 @@ void FMOD_Play_Sample_f (void)
 	FMOD_Play_Stream_f (samplename);
 }
 
+
 void FMOD_PlayTrack (int track)
 {
 	char streamname[MAX_OSPATH];
@@ -278,20 +282,22 @@ void FMOD_PlayTrack (int track)
 	FMOD_Play_Stream_f (streamname);
 }
 
-void FMOD_Enable_f (void)
+static qboolean OnChange_fmod_music(cvar_t *var, char *string)
 {
-	if (fmod_loaded == true)
+	float	newval = Q_atof(string);
+
+	if (!fmod_loaded)
+		return true;
+
+	if (!newval)
 	{
-		fmod_enabled = !(fmod_enabled);
-
-		if (fmod_enabled)
-			Con_Printf ("Using FMOD to play music files: Enabled\n");
-		else
-			Con_Printf ("Using FMOD to play music files: Disabled\n");
-
+		Con_Printf ("External background music, Δισαβμεδ.\n");
 		if (streamplaying)
-			FMOD_Stop_Stream_f ();
+			FMOD_Stop_Stream_f();
 	}
+	else
+		Con_Printf ("External background music, Enabled.\n");
+	return false;
 }
 
 void FMOD_Init (void)
@@ -307,5 +313,5 @@ void FMOD_Init (void)
 	Cmd_AddCommand ("playmod", FMOD_Play_f);
 	Cmd_AddCommand ("stopsample", FMOD_Stop_Stream_f);
 	Cmd_AddCommand ("playsample", FMOD_Play_Sample_f);
-	Cmd_AddCommand ("fmod_music", FMOD_Enable_f);
+	Cvar_RegisterVariable(&fmod_music);
 }

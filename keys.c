@@ -25,24 +25,24 @@ key up events are sent even if in console mode
 
 */
 
-//cvar_t		cl_chatmode = {"cl_chatmode", "1"};
+//cvar_t	cl_chatmode = {"cl_chatmode", "1"};
 char		key_lines[64][MAXCMDLINE];	// 32 doubled -- joe
-int			key_linepos;
-int			key_lastpress;
+int		key_linepos;
+int		key_lastpress;
 	
-int			edit_line = 0;
-int			history_line = 0;
+int		edit_line = 0;
+int		history_line = 0;
 
 keydest_t	key_dest;
 
-int			key_insert = 1;	// On by Default, from [sons]Quake
-int			key_count;		// incremented every key event
+int		key_insert = 1;	// On by Default, from [sons]Quake
+int		key_count;		// incremented every key event
 
 char		*keybindings[256];
 qboolean	consolekeys[256];	// if true, can't be rebound while in console
 qboolean	menubound[256];		// if true, can't be rebound while in menu
-int			keyshift[256];		// key to map to if shift held down in console
-int			key_repeats[256];	// if > 1, it is autorepeating
+int		keyshift[256];		// key to map to if shift held down in console
+int		key_repeats[256];	// if > 1, it is autorepeating
 qboolean	keydown[256];
 
 typedef struct
@@ -535,8 +535,8 @@ void Key_Console (int key)
 		return;
 	}
 
-	//R00k: using ctrl-x to erase current line.
-	if ((key == 'X' || key == 'x') && keydown[K_CTRL])
+	//R00k: using ctrl-u to erase current line.
+	if ((key == 'U' || key == 'u') && keydown[K_CTRL])
 	{
 		key_lines[edit_line][1] = 0;	// clear any typing
 		key_linepos = 1;
@@ -1051,10 +1051,7 @@ void Key_Event (int key, qboolean down)
 
 	// switch between fullscreen/windowed when ALT+ENTER is pressed
 	if( key == K_ENTER && down && keydown[K_ALT])
-	{/*use cvars for user defaults
-		Cvar_Set ("vid_width", va("%i", 640));
-		Cvar_Set ("vid_height", va("%i",480));
-	*/
+	{
 		Cbuf_AddText("toggle vid_fullscreen;wait;vid_restart;\n");
 		Cbuf_Execute();
 		return;

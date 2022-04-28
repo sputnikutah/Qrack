@@ -18,7 +18,7 @@ typedef struct location_s
 
 void LOC_Init (void);
 // Load the locations for the current level from the location file
-void LOC_LoadLocations (void);
+qboolean LOC_LoadLocations (void);
 // Get the name of the location of a point
 char *LOC_GetLocation (vec3_t p);
 void LOC_DeleteCurrent_f (void);

@@ -41,7 +41,7 @@ qboolean OnChange_gl_max_size (cvar_t *var, char *string);
 cvar_t	gl_max_size = {"gl_max_size", "1024", false, false, OnChange_gl_max_size};
 
 qboolean OnChange_gl_texturemode (cvar_t *var, char *string);
-cvar_t	gl_texturemode = {"gl_texturemode", "GL_LINEAR_MIPMAP_NEAREST", false, false, OnChange_gl_texturemode};
+cvar_t	gl_texturemode = {"gl_texturemode", "GL_NEAREST_MIPMAP_LINEAR", true, false, OnChange_gl_texturemode};
 cvar_t	gl_mipmap_lightmaps = {"gl_mipmap_lightmaps", "0", true};//By default lightmaps are filtered to GL_LINEAR_MIPMAP_NEAREST, toggling this forces lightmaps to synch to gl_texturemode
 
 cvar_t	gl_externaltextures_world	= {"gl_externaltextures_world"	, "1",true};
@@ -63,6 +63,8 @@ cvar_t gl_smoothfont			= {"gl_smoothfont", "0", true, false, OnChange_gl_smoothf
 cvar_t	gl_free_world_textures	= {"gl_free_world_textures","1",true};//R00k
 
 cvar_t	gl_greyscale = {"gl_greyscale","0", false, false};//internal for mods...
+
+cvar_t	gl_gammascale = {"gl_gammascale","0", true, false};//Some drivers dont let me adjust gl_gamma :( this is a workaround.
 
 static qboolean no24bit, no24bitWad;
 
@@ -283,20 +285,20 @@ mpic_t *Draw_PicFromWad (char *name)
 	if ((no24bitWad == false) && (no24bit == false))
 	{			
 		Q_snprintfz (vname, sizeof(vname),"%s/textures/wad/%s",com_gamedir, name);
-		if (pic_24bit = GL_LoadPicImage(vname, name, 0, 0, TEX_ALPHA))		
+		if (pic_24bit = GL_LoadPicImage(vname, name, 0, 0, TEX_ALPHA|TEX_MIPMAP))		
 		{
 			memcpy (&pic->texnum, &pic_24bit->texnum, sizeof(mpic_t) - 8);
 			return pic;
 		}
 
 		Q_snprintfz (vname, sizeof(vname),"%s/gfx/%s",com_gamedir, name);
-		if (pic_24bit = GL_LoadPicImage(vname, name, 0, 0, TEX_ALPHA))
+		if (pic_24bit = GL_LoadPicImage(vname, name, 0, 0, TEX_ALPHA|TEX_MIPMAP))
 		{
 			memcpy (&pic->texnum, &pic_24bit->texnum, sizeof(mpic_t) - 8);
 			return pic;
 		}
 
-		if ((pic_24bit = GL_LoadPicImage(va("textures/wad/%s", name), name, 0, 0, TEX_ALPHA)) || (pic_24bit = GL_LoadPicImage(va("gfx/%s",name), name, 0, 0, TEX_ALPHA)))		
+		if ((pic_24bit = GL_LoadPicImage(va("textures/wad/%s", name), name, 0, 0, TEX_ALPHA|TEX_MIPMAP)) || (pic_24bit = GL_LoadPicImage(va("gfx/%s",name), name, 0, 0, TEX_ALPHA|TEX_MIPMAP)))		
 		{
 			memcpy (&pic->texnum, &pic_24bit->texnum, sizeof(mpic_t) - 8);
 			return pic;
@@ -370,7 +372,7 @@ mpic_t *Draw_CachePic (char *path)
 	pic->pic.width = dat->width;
 	pic->pic.height = dat->height;
 
-	if ((pic_24bit = GL_LoadPicImage(path, NULL, 0, 0, TEX_ALPHA)))
+	if ((pic_24bit = GL_LoadPicImage(path, NULL, 0, 0, TEX_ALPHA|TEX_MIPMAP)))
 		memcpy (&pic->pic.texnum, &pic_24bit->texnum, sizeof(mpic_t) - 8);
 	else
 		GL_LoadPicTexture (path, &pic->pic, dat->data);
@@ -399,7 +401,7 @@ void Draw_CharToConback (int num, byte *dest)
 	}
 }
 
-qboolean OnChange_Conback_Image (cvar_t *var, char *string)
+qboolean OnChange_Conback_Image (cvar_t *var, char *string)//R00k
 {
 	mpic_t	*pic_24bit;
 
@@ -437,7 +439,7 @@ void Draw_InitConback (void)
 //	if (cb->width != 320 || cb->height != 200)
 //		Sys_Error ("Draw_InitConback: conback.lmp size is not 320x200");
 
-	if (pic_24bit = GL_LoadPicImage(gl_conback_image.string, "conback", 0, 0, 0))
+	if (pic_24bit = GL_LoadPicImage(gl_conback_image.string, "conback", 0, 0, TEX_MIPMAP))
 	{
 		memcpy (&conback->texnum, &pic_24bit->texnum, sizeof(mpic_t) - 8);
 	}
@@ -490,7 +492,9 @@ glmode_t modes[] =
 	{"GL_NEAREST_MIPMAP_NEAREST", GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST},
 	{"GL_LINEAR_MIPMAP_NEAREST", GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR},
 	{"GL_NEAREST_MIPMAP_LINEAR", GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST},
-	{"GL_LINEAR_MIPMAP_LINEAR", GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR}
+	{"GL_LINEAR_MIPMAP_LINEAR", GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR},
+	{"GL_LINEAR_MIPMAP_LINEAR_MAG_NEAREST", GL_LINEAR_MIPMAP_LINEAR, GL_NEAREST},
+	{"GL_NEAREST_MIPMAP_LINEAR_MAG_LINEAR", GL_NEAREST_MIPMAP_LINEAR, GL_LINEAR}
 };
 
 #define GLMODE_NUMODES	(sizeof(modes) / sizeof(glmode_t))
@@ -660,10 +664,10 @@ qboolean OnChange_gl_crosshairimage (cvar_t *var, char *string)
 		return false;
 	}
 
-	if (!(pic = GL_LoadPicImage(va("crosshairs/%s", string), "crosshair", 0, 0, TEX_ALPHA)))
+	if (!(pic = GL_LoadPicImage(va("crosshairs/%s", string), "crosshair", 0, 0, TEX_ALPHA|TEX_MIPMAP)))
 	{
 		crosshairimage_loaded = false;
-		Con_Printf ("Couldn't load crosshair \"%s\"\n", string);
+		Con_Printf ("Couldn't load crosshairimage %s\n", string);
 
 		return false;
 	}
@@ -708,6 +712,7 @@ void Draw_Init (void)
 		Cvar_RegisterVariable (&gl_crosshairimage);
 		Cvar_RegisterVariable (&crosshair_static);//Entar
 		Cvar_RegisterVariable (&gl_greyscale);
+		Cvar_RegisterVariable (&gl_gammascale);
 		Cvar_RegisterVariable (&gl_texturemode);
 		Cvar_RegisterVariable (&gl_mipmap_lightmaps);
 		Cvar_RegisterVariable (&gl_externaltextures_world);
@@ -1025,7 +1030,6 @@ void Draw_Crosshair (void)
 	float			ofs1, ofs2, sh, th, sl, tl, x, y;
 	byte			*col;
 	extern vrect_t	scr_vrect;
-	extern int		particletexture2;
 	extern cvar_t	v_viewheight;
 
 	trace_t tr;
@@ -1037,9 +1041,9 @@ void Draw_Crosshair (void)
 
 	if (!crosshair_static.value && scr_viewsize.value >= 100 && cl.worldmodel)//dynamic xhair by Entar/LordHavoc
 	{
-		AngleVectors (cl.viewangles,  fwds, NULL, NULL);	
+		AngleVectors (r_refdef.viewangles,  fwds, NULL, NULL);	
 		VectorCopy(cl_entities[cl.viewentity].origin, start);
-		start[2] +=  16;//QuakeC uses + '0 0 16' for gun aim.
+		start[2] += 16;//QuakeC uses + '0 0 16' for gun aim.
 
 		VectorMA(start, 4096, fwds, end);
 	
@@ -1049,9 +1053,11 @@ void Draw_Crosshair (void)
 
 		if (tr.fraction != 1)
 		{
-			start[2] +=  16;//Methinks the start gets reset after SV_RecursiveHullCheck....so this is required.
+			start[2] += 16;//REQUIRED: Methinks the start gets reset after SV_RecursiveHullCheck....so this is required.
+		
 			ML_Project(tr.endpos, end, cl.viewangles, start, (float)scr_vrect.width/scr_vrect.height, r_refdef.fov_y);//Entar
 			x = scr_vrect.x + scr_vrect.width/2;
+			
 			y = (scr_vrect.y+scr_vrect.height*(end[1]));
 			y = scr_vrect.height - y; // Entar : HACKYNESS yes, but it works pretty well
 			y -= (y - (scr_vrect.height / 2)) / 2;//
@@ -1668,7 +1674,7 @@ void Draw_FadeScreen (void)
 {
 	glEnable (GL_BLEND);
 	glDisable (GL_TEXTURE_2D);
-	glColor4f (0.0, 0.0, 0.0, 0.8);
+	glColor4f (0.0, 0.0, 0.0, 0.777);
 
 	glBegin (GL_QUADS);
 
@@ -1929,6 +1935,25 @@ static void ScaleDimensions(int width, int height, int *scaled_width, int *scale
 	*scaled_height = bound(1, *scaled_height, maxsize);
 }
 
+__inline unsigned RGBAtoGammascale(unsigned rgba)
+{
+	unsigned char *rgb;
+	unsigned output;
+	
+	int value;
+
+	value = bound(1, gl_gammascale.value, 3);
+
+	output = rgba;
+	rgb = ((unsigned char *)&output);
+
+	rgb[0] = CLAMP(1, (rgb[0] * value), 255);
+	rgb[1] = CLAMP(1, (rgb[1] * value), 255);
+	rgb[2] = CLAMP(1, (rgb[2] * value), 255);
+
+	return output;
+}
+
 __inline unsigned RGBAtoGrayscale(unsigned rgba)//QMB
 {
 	unsigned char *rgb, value;
@@ -1936,13 +1961,23 @@ __inline unsigned RGBAtoGrayscale(unsigned rgba)//QMB
 	
 	output = rgba;
 	rgb = ((unsigned char *)&output);
-		
-	value = min(255,rgb[0] * 0.2125 + rgb[1] * 0.7154 + rgb[2] * 0.0721);
 
-	rgb[0] = value;
-	rgb[1] = value;
-	rgb[2] = value;
-		
+	value = min(255,rgb[0] * 0.738 + rgb[1] * 1.063 + rgb[2] * 0.563);
+
+	//Change to sepia brown
+	if (gl_greyscale.value > 1)
+	{
+		rgb[0] = value * 0.74;
+		rgb[1] = value * 0.53;
+		rgb[2] = value * 0.38;
+	}
+	else
+	{
+		rgb[0] = value;
+		rgb[1] = value;
+		rgb[2] = value;
+	}
+
 	return output;
 }
 
@@ -2017,18 +2052,36 @@ void GL_Upload32 (unsigned *data, int width, int height, int mode)
 		}	
 	}
 
+	if ((mode & TEX_WORLD) && (gl_gammascale.value))
+	{
+		int i, size;
+
+		size = scaled_width * scaled_height;
+		for (i=0;i<size;i++)
+		{
+			scaled[i] = RGBAtoGammascale(scaled[i]);//QMB
+		}	
+	}
+
 #ifdef USEFAKEGL 
 	internal_format = (mode & TEX_ALPHA) ? gl_alpha_format : gl_solid_format;
 #else
-	if ((g_canUseTexComp && gl_texCompression.value) && (!mode & TEX_LUMA))//tex_luma chokes when compressed not sure why...
+	if (g_canUseTexComp && gl_texCompression.value)
 	{
+		glHint(GL_TEXTURE_COMPRESSION_HINT, GL_NICEST);
 		if (mode & TEX_ALPHA)
 		{
-			internal_format = GL_COMPRESSED_RGBA;//alpha_compressed_format
+			if (mode & TEX_LUMA)
+				internal_format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+			else
+				internal_format = GL_COMPRESSED_RGBA;//alpha_compressed_format
 		}
-		else
+		else 
 		{
-			internal_format = GL_COMPRESSED_RGB;//solid_compressed_format
+			if (mode & TEX_LUMA)
+				internal_format = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
+			else
+				internal_format = GL_COMPRESSED_RGB;//solid_compressed_format
 		}
 	}
 	else
@@ -2077,7 +2130,7 @@ GL_Upload8
 */
 void GL_Upload8 (byte *data, int width, int height, int mode)
 {
-	static unsigned	trans[1024*1024];//R00k upped...
+	static unsigned	trans[1024*1024];//R00k upped... FIXME does this have to be?!
 	int		i, size, p;
 	unsigned	*table;
 
@@ -2261,7 +2314,7 @@ int GL_LoadPicTexture (char *name, mpic_t *pic, byte *data)
 	Q_strncpyz (fullname + 4, name, sizeof(fullname) - 4);
 	if (glwidth == pic->width && glheight == pic->height)
 	{
-		pic->texnum = GL_LoadTexture (fullname, glwidth, glheight, data, TEX_ALPHA, 1);
+		pic->texnum = GL_LoadTexture (fullname, glwidth, glheight, data, TEX_ALPHA|TEX_MIPMAP, 1);
 		pic->sl = 0;
 		pic->sh = 1;
 		pic->tl = 0;
@@ -2282,7 +2335,7 @@ int GL_LoadPicTexture (char *name, mpic_t *pic, byte *data)
 			dest += glwidth;
 		}
 
-		pic->texnum = GL_LoadTexture ("", glwidth, glheight, buf, TEX_ALPHA, 1);
+		pic->texnum = GL_LoadTexture ("", glwidth, glheight, buf, TEX_ALPHA|TEX_MIPMAP, 1);
 		pic->sl = 0;
 		pic->sh = (float)pic->width / glwidth;
 		pic->tl = 0;

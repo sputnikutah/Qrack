@@ -182,14 +182,44 @@ sndinitstat SNDDMA_InitDirect (void)
 	WAVEFORMATEX	format, pformat; 
 	HRESULT		hresult;
 	int		reps;
-	
+	extern cvar_t snd_nofocusblock;
+
 	memset ((void *)&sn, 0, sizeof(sn));
 
 	shm = &sn;
 
 	shm->channels = 2;
 	shm->samplebits = 16;
-	shm->speed = COM_CheckParm("-44khz") ? 44100 : COM_CheckParm("-22khz") ? 22050 : 11025;
+
+	if ((COM_CheckParm("-48khz"))||(s_khz.value == 48))
+	{
+		shm->speed = 48000;
+	}
+	else
+	{
+		if ((COM_CheckParm("-44khz"))||(s_khz.value == 44))
+		{
+			shm->speed = 44100;
+		}
+		else
+		{
+			if ((COM_CheckParm("-22khz"))||(s_khz.value == 22))
+			{
+				shm->speed = 22050;
+			}
+			else
+			{
+				if (s_khz.value == 11)
+					shm->speed = 11025;
+				else
+				{
+					if (s_khz.value)
+						Con_SafePrintf ("\x02Warning: Invalid snd_khz value, setting to 48Khz.\n");
+					shm->speed = 48000;
+				}
+			}
+		}
+	}
 
 	memset (&format, 0, sizeof(format));
 	format.wFormatTag = WAVE_FORMAT_PCM;
@@ -255,6 +285,13 @@ sndinitstat SNDDMA_InitDirect (void)
 	memset (&dsbuf, 0, sizeof(dsbuf));
 	dsbuf.dwSize = sizeof(DSBUFFERDESC);
 	dsbuf.dwFlags = DSBCAPS_PRIMARYBUFFER;
+/*FIXME THIS NEEDS TO BE SET ELSEWHERE
+	if (snd_nofocusblock.value)//R00k added for streamers to be able to alt-tab to desktop and not mute the game.
+	{
+		dsbuf.dwFlags |= DSBCAPS_GLOBALFOCUS;
+		//Con_Printf ("Using DSBCAPS_GLOBALFOCUS\n");
+	}
+*/
 	dsbuf.dwBufferBytes = 0;
 	dsbuf.lpwfxFormat = NULL;
 
@@ -408,8 +445,37 @@ qboolean SNDDMA_InitWav (void)
 
 	shm->channels = 2;
 	shm->samplebits = 16;
-	shm->speed = COM_CheckParm("-44khz") ? 44100 : COM_CheckParm("-22khz") ? 22050 : 11025;
-	
+
+	if ((COM_CheckParm("-48khz"))||(s_khz.value == 48))
+	{
+		shm->speed = 48000;
+	}
+	else
+	{
+		if ((COM_CheckParm("-44khz"))||(s_khz.value == 44))
+		{
+			shm->speed = 44100;
+		}
+		else
+		{
+			if ((COM_CheckParm("-22khz"))||(s_khz.value == 22))
+			{
+				shm->speed = 22050;
+			}
+			else
+			{
+				if (s_khz.value == 11)
+					shm->speed = 11025;
+				else
+				{
+					if (s_khz.value)
+						Con_SafePrintf ("\x02Warning: Invalid snd_khz value, setting to 48Khz.\n");
+					shm->speed = 48000;
+				}
+			}
+		}
+	}
+
 	memset (&format, 0, sizeof(format));
 	format.wFormatTag = WAVE_FORMAT_PCM;
 	format.nChannels = shm->channels;
@@ -673,4 +739,14 @@ Reset the sound device for exiting
 void SNDDMA_Shutdown (void)
 {
 	FreeSound ();
+}
+
+void SNDDMA_Restart_f(void)
+{
+	S_StopAllSounds (true);
+	SNDDMA_Shutdown();
+	Cache_Flush();
+	snd_firsttime = true;
+	SNDDMA_Init();
+	Con_Printf("%d bit, %s, %d Hz\n", shm->samplebits,(shm->channels == 2) ? "stereo" : "mono", shm->speed);
 }

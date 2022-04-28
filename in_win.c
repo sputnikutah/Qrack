@@ -1558,7 +1558,7 @@ void IN_MouseMove (usercmd_t *cmd)
 		}
 	}
 
-	/*http://www.team5150.com/~andrew/carmack/johnc_plan_1998.html#d19980608: 
+	/*johnc_plan_1998: 
 	I knew there were some sampling quantization issues early on, so I added the "m_filter 1" variable, 
 	but it really wasn't an optimal solution. It averaged together the samples collected at the last two frames, 
 	which worked out ok if the framerate stayed consistantly high and you were only averaging together one to three samples, 

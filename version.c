@@ -74,7 +74,7 @@ CL_Version_f
 */
 void Host_Version_f (void)
 {
-	Con_Printf ("Qrack version %s\n", VersionString());	
+	Con_Printf ("Qrack %s\n", VersionString());	
 }
 
 /*
@@ -86,7 +86,7 @@ char *VersionString (void)
 {
 	static char str[32];
 
-	Q_snprintfz (str, sizeof(str), "%s (build %i) %s", QRACK_VERSION, build_number(),__DATE__);
+	Q_snprintfz (str, sizeof(str), "%s (build %i)", QRACK_VERSION, build_number());
 
 	return str;
 }

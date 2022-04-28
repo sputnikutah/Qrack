@@ -38,12 +38,10 @@ void GL_CreateBuffers (void)
 	qglGenBuffers (MAX_BUFFERS, gl_vertexbufferobjects);
 }
 
-
 void GL_BeginBuffers (void)
 {
 	gl_currentvertexbuffer = 0;
 }
-
 
 GLuint GL_GetBuffer (void)
 {
@@ -64,7 +62,6 @@ GLuint GL_GetBuffer (void)
 GLuint gl_current_array_buffer = 0;
 GLuint gl_current_element_array_buffer = 0;
 unsigned int gl_currentvertexarrays = 0;
-
 
 typedef struct gl_vertexarray_s
 {

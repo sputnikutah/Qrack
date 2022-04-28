@@ -42,7 +42,7 @@ model_t	mod_known[MAX_MOD_KNOWN];
 int	mod_numknown;
 
 cvar_t	gl_subdivide_size = {"gl_subdivide_size", "128", true};
-
+float	map_fallbackalpha;
 /*
 ===============
 Mod_Init
@@ -53,8 +53,6 @@ void Mod_Init (void)
 	Cvar_RegisterVariable (&gl_subdivide_size);
 	memset (mod_novis, 0xff, sizeof(mod_novis));
 }
-
-
 
 /*
 ===============
@@ -781,6 +779,7 @@ static byte *LoadColoredLighting (char *name, char **litfilename)
 Mod_LoadLighting
 =================
 */
+
 void Mod_LoadLighting (lump_t *l)
 {
 	int	i, lit_ver;
@@ -1111,6 +1110,7 @@ void CalcSurfaceExtents (msurface_t *s)
 		for (j=0 ; j<2 ; j++)
 		{
 			val = v->position[0] * tex->vecs[j][0] + v->position[1] * tex->vecs[j][1] + v->position[2] * tex->vecs[j][2] + tex->vecs[j][3];
+
 			if (val < mins[j])
 				mins[j] = val;
 			if (val > maxs[j])
@@ -1125,6 +1125,7 @@ void CalcSurfaceExtents (msurface_t *s)
 
 		s->texturemins[i] = bmins[i] * 16;
 		s->extents[i] = (bmaxs[i] - bmins[i]) * 16;
+
 		if (!(tex->flags & TEX_SPECIAL) && s->extents[i] > 2028)
 			Host_Error ("CalcSurfaceExtents: Bad surface extents");
 	}
@@ -1688,6 +1689,104 @@ void Mod_LoadLeafs (lump_t *l, int bsp2)
 		Mod_ProcessLeafs_S  ((dsleaf_t *) in, l->filelen);
 }
 
+//spike
+void Mod_CheckWaterVis(void)
+{
+	mleaf_t		*leaf, *other;
+	int i, j, k;
+	int numclusters = loadmodel->submodels[0].visleafs;
+	int contentfound = 0;
+	int contenttransparent = 0;
+	int contenttype;
+
+	if (r_novis.value)
+	{	//all can be
+		loadmodel->contentstransparent = (SURF_DRAWWATER|SURF_DRAWTELE|SURF_DRAWSLIME|SURF_DRAWLAVA);
+		return;
+	}
+
+	//pvs is 1-based. leaf 0 sees all (the solid leaf).
+	//leaf 0 has no pvs, and does not appear in other leafs either, so watch out for the biases.
+	for (i=0,leaf=loadmodel->leafs+1 ; i<numclusters ; i++, leaf++)
+	{
+		byte *vis;
+		if (leaf->contents == CONTENTS_WATER)
+		{
+			if ((contenttransparent & (SURF_DRAWWATER|SURF_DRAWTELE))==(SURF_DRAWWATER|SURF_DRAWTELE))
+				continue;
+			//this check is somewhat risky, but we should be able to get away with it.
+			for (contenttype = 0, i = 0; i < leaf->nummarksurfaces; i++)
+				if (leaf->firstmarksurface[i]->flags & (SURF_DRAWWATER|SURF_DRAWTELE))///fixme ENGINE CRASHES ON MAP CHANGE HERE
+				{
+					contenttype = leaf->firstmarksurface[i]->flags & (SURF_DRAWWATER|SURF_DRAWTELE);
+					break;
+				}
+			//its possible that this leaf has absolutely no surfaces in it, turb or otherwise.
+			if (contenttype == 0)
+				continue;
+		}
+		else if (leaf->contents == CONTENTS_SLIME)
+			contenttype = SURF_DRAWSLIME;
+		else if (leaf->contents == CONTENTS_LAVA)
+			contenttype = SURF_DRAWLAVA;
+		//fixme: tele
+		else
+			continue;
+		if (contenttransparent & contenttype)
+		{
+			nextleaf:
+			continue;	//found one of this type already
+		}
+		contentfound |= contenttype;
+		vis = Mod_DecompressVis(leaf->compressed_vis, loadmodel);
+		for (j = 0; j < (numclusters+7)/8; j++)
+		{
+			if (vis[j])
+			{
+				for (k = 0; k < 8; k++)
+				{
+					if (vis[j] & (1u<<k))
+					{
+						other = &loadmodel->leafs[(j<<3)+k+1];
+						if (leaf->contents != other->contents)
+						{
+//							Con_Printf("%p:%i sees %p:%i\n", leaf, leaf->contents, other, other->contents);
+							contenttransparent |= contenttype;
+							goto nextleaf;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (!contenttransparent)
+	{
+		if (loadmodel->isworldmodel)
+			Con_Printf("%s is not watervised\n", loadmodel->name);
+		Cvar_SetValue("r_wateralpha", 1.0);
+	}
+	else
+	{
+		if (loadmodel->isworldmodel)
+			Con_Printf("%s is vised for transparent", loadmodel->name);
+		/*
+		if (contenttransparent & SURF_DRAWWATER)
+			Con_Printf(" water");
+		if (contenttransparent & SURF_DRAWTELE)
+			Con_Printf(" tele");
+		if (contenttransparent & SURF_DRAWLAVA)
+			Con_Printf(" lava");
+		if (contenttransparent & SURF_DRAWSLIME)
+			Con_Printf(" slime");
+		Con_Printf("\n");*/
+		Cvar_SetValue("r_wateralpha", map_fallbackalpha);		
+	}
+
+	//any types that we didn't find are assumed to be transparent.
+	//this allows submodels to work okay (eg: ad uses func_illusionary teleporters for some reason).
+	loadmodel->contentstransparent = contenttransparent | (~contentfound & (SURF_DRAWWATER|SURF_DRAWTELE|SURF_DRAWSLIME|SURF_DRAWLAVA));
+}
 
 /*
 =================
@@ -2072,6 +2171,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 			mod = loadmodel;
 		}
 	}
+//	Mod_CheckWaterVis(); (FIXME)
 }
 
 /*
@@ -2269,7 +2369,7 @@ void Mod_LoadAliasModelTexture (char *identifier, int picmip_flag, int *gl_texnu
 	char	loadpath[64];
 	extern cvar_t cl_teamskin;
 
-	if (!gl_externaltextures_models.value)
+	if ((!gl_externaltextures_models.value)&&((loadmodel->modhint != MOD_PLAYER)))
 		return;
 
 	if ((loadmodel->modhint == MOD_PLAYER)&&(!cl_teamskin.value))
@@ -2550,6 +2650,8 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	pheader = Hunk_AllocName (size, va("%s_@pheader", mod->name));
 	
 	mod->flags = LittleLong (pinmodel->flags);
+
+	mod->flags &= (0xFF | MF_HOLEY); //only preserve first byte, plus MF_HOLEY
 
 // endian-adjust and copy the data, starting with the alias model header
 	pheader->boundingradius = LittleFloat (pinmodel->boundingradius);

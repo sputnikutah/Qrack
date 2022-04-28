@@ -157,7 +157,7 @@ typedef struct
 	char		spawnparms[MAX_MAPSTRING];	// to restart a level
 
 // demo loop control
-	int			demonum;			// -1 = don't play demos
+	int		demonum;			// -1 = don't play demos
 	char		demos[MAX_DEMOS][MAX_DEMONAME];	// when not playing
 
 // demo recording info must be here, because record is started before
@@ -165,21 +165,21 @@ typedef struct
 	qboolean	demorecording;
 	qboolean	demoplayback;
 	qboolean	timedemo;
-	int			forcetrack;			// -1 = use normal cd track
+	int		forcetrack;			// -1 = use normal cd track
 	FILE		*demofile;
-	int			td_lastframe;			// to meter out one message a frame
-	int			td_startframe;			// host_framecount at start
+	int		td_lastframe;			// to meter out one message a frame
+	int		td_startframe;			// host_framecount at start
 	double		td_starttime;			// realtime at second frame of timedemo
 
 
 // connection information
-	int			signon;					// 0 to SIGNONS
+	int		signon;					// 0 to SIGNONS
 	struct		qsocket_s	*netcon;
 	sizebuf_t	message;				// writing buffer to send to server
 	entity_t	demoentity;				// R00k - entity for demo playback freemove
 
 	byte		demodata[4][NET_MAXMESSAGE];		//R00k - for otf demo recording
-	int			demosize[4];						//R00k - for otf demo recording
+	int		demosize[4];				//R00k - for otf demo recording
 	char		demoname[MAX_DEMONAME];
 
 	download_t	download;
@@ -192,19 +192,20 @@ extern	client_static_t	cls;
 // server signon
 typedef struct
 {
-	int			movemessages;		// since connecting to this server
-									// throw out the first couple, so the player
-									// doesn't accidentally do something the 
-									// first frame
+	int		movemessages;		// since connecting to this server
+						// throw out the first couple, so the player
+						// doesn't accidentally do something the 
+						// first frame
 
 	usercmd_t	cmd;			// last command sent to the server
+	usercmd_t	pendingcmd;		// accumulated state from mice+joysticks.
 
 	// information for local display
-	int			stats[MAX_CL_STATS];	// health, etc
-	int			items;			// inventory bit flags
+	int		stats[MAX_CL_STATS];	// health, etc
+	int		items;			// inventory bit flags
 	float		item_gettime[32];	// cl.time of aquiring item, for blinking
 	float		faceanimtime;		// use anim frame if cl.time < this
-	float		hurtblur;			// blur view caused by damage;
+	float		hurtblur;		// blur view caused by damage;
 
 	cshift_t	cshifts[NUM_CSHIFTS];	// color shifts for damage, powerups
 	cshift_t	prev_cshifts[NUM_CSHIFTS];	// and content types
@@ -272,7 +273,7 @@ typedef struct
 	struct efrag_s	*free_efrags;
 
 	int				num_entities;		// held in cl_entities array
-	int				num_statics;			// held in cl_staticentities array
+	int				num_statics;		// held in cl_staticentities array
 	entity_t		viewent;			// the gun model	
 	int				cdtrack, looptrack;	// cd audio
 
@@ -361,7 +362,7 @@ extern	cvar_t	cl_maxfps;
 extern	cvar_t	cl_advancedcompletion;
 
 #define	MAX_TEMP_ENTITIES	256		// lightning bolts, etc
-#define	MAX_STATIC_ENTITIES	512 	// torches, etc
+#define	MAX_STATIC_ENTITIES	1024 	// torches, etc
 #define	MAX_VISEDICTS		4096	//johnfitz -- was 256
 
 // FIXME, allocate dynamically?
@@ -455,6 +456,8 @@ typedef	enum modelindex_s
 	mi_2dcells,
 	mi_2drockets,
 	mi_2dnails,
+	mi_2dhealth10,
+	mi_2dhealth25,
 	mi_2dmega,
 	mi_2dpent,
 	mi_2dquad,
@@ -464,8 +467,6 @@ typedef	enum modelindex_s
 	mi_2darmor2,
 	mi_2darmor3,
 	mi_2dbackpack,
-	mi_2dhealth10,
-	mi_2dhealth25,
 	mi_2drl,
 	mi_2dgl,
 	mi_2dlg,

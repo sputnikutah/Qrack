@@ -345,7 +345,7 @@ Returns a string describing *data in a type specific manner
 */
 char *PR_ValueString (etype_t type, eval_t *val)
 {
-	static char	line[256];
+	static char	line[512];
 	ddef_t		*def;
 	dfunction_t	*f;
 	
@@ -405,7 +405,7 @@ Easier to parse than PR_ValueString
 */
 char *PR_UglyValueString (etype_t type, eval_t *val)
 {
-	static char	line[256];
+	static char	line[1024];
 	ddef_t		*def;
 	dfunction_t	*f;
 	
@@ -414,37 +414,37 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 	switch (type)
 	{
 	case ev_string:
-		sprintf (line, "%s", pr_strings + val->string);
+		Q_snprintfz (line, sizeof(line), "%s", pr_strings + val->string);
 		break;
 
 	case ev_entity:	
-		sprintf (line, "%i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)));
+		Q_snprintfz (line, sizeof(line), "%i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)));
 		break;
 
 	case ev_function:
 		f = pr_functions + val->function;
-		sprintf (line, "%s", pr_strings + f->s_name);
+		Q_snprintfz (line, sizeof(line), "%s", pr_strings + f->s_name);
 		break;
 
 	case ev_field:
 		def = ED_FieldAtOfs ( val->_int );
-		sprintf (line, "%s", pr_strings + def->s_name);
+		Q_snprintfz  (line, sizeof(line), "%s", pr_strings + def->s_name);
 		break;
 
 	case ev_void:
-		sprintf (line, "void");
+		Q_snprintfz (line, sizeof(line), "void");
 		break;
 
 	case ev_float:
-		sprintf (line, "%f", val->_float);
+		Q_snprintfz (line, sizeof(line), "%f", val->_float);
 		break;
 
 	case ev_vector:
-		sprintf (line, "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
+		Q_snprintfz (line, sizeof(line), "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
 		break;
 
 	default:
-		sprintf (line, "bad type %i", type);
+		Q_snprintfz (line, sizeof(line), "bad type %i", type);
 		break;
 	}
 	
@@ -465,7 +465,7 @@ char *PR_GlobalString (int ofs)
 	int		i;
 	ddef_t	*def;
 	void	*val;
-	static char	line[128];
+	static char	line[512];
 	
 	val = (void *)&pr_globals[ofs];
 	if (!(def = ED_GlobalAtOfs(ofs)))
@@ -490,7 +490,7 @@ char *PR_GlobalStringNoContents (int ofs)
 {
 	int		i;
 	ddef_t		*def;
-	static	char	line[128];
+	static	char	line[512];
 	
 	if (!(def = ED_GlobalAtOfs(ofs)))
 		sprintf (line, "%i(???)", ofs);
@@ -1003,8 +1003,8 @@ void ED_LoadFromFile (char *data)
 		if (com_token[0] != '{')		// "ED_LoadFromFile: found %s when expecting {"
 		{			
 			Con_DPrintf (1,"ED_LoadFromFile: found %s when expecting {\n",com_token);
-			com_token[0] = 0;			//R00k: fuck it! (09/24/2015) 
-			continue;					//skip the garbage.
+			com_token[0] = 0;//R00k: Hack! (09/24/2015) 
+			continue;				//skip the garbage.
 		}
 
 		ent = (!ent) ? EDICT_NUM(0) : ED_Alloc ();
@@ -1054,93 +1054,6 @@ void ED_LoadFromFile (char *data)
 	}	
 
 	Con_DPrintf (1,"%i entities inhibited\n", inhibit);
-}
-
-/*
-===============
-PR_Load_QCCX_Progs
-
-Qccx progs need special handling.
-===============
-*/
-void PR_Load_QCCX_Progs (void)
-{
-	int		i;
-
-// flush the non-C variable lookup cache
-	for (i=0 ; i<GEFV_CACHESIZE ; i++)
-		gefvCache[i].field[0] = 0;
-
-	CRC_Init (&pr_crc);
-
-	if (sv_progs.string == NULL)
-		sv_progs.string = "progs.dat";//R00k: dont't crash just provide the standard.
-
-	if (!(progs = (dprograms_t *)COM_LoadHunkFile(sv_progs.string)))
-		Sys_Error ("PR_LoadProgs: couldn't load %s", sv_progs.string);
-
-	Con_DPrintf (1,"Programs occupy %iK.\n", com_filesize/1024);
-
-	for (i=0 ; i<com_filesize ; i++)
-		CRC_ProcessByte (&pr_crc, ((byte *)progs)[i]);
-
-// byte swap the header
-	for (i=0 ; i<sizeof(*progs)/4 ; i++)
-		((int *)progs)[i] = LittleLong ( ((int *)progs)[i] );		
-
-	if (progs->version != PROG_VERSION)
-		Host_Error ("progs.dat has wrong version number (%i should be %i)", progs->version, PROG_VERSION);
-	if (progs->crc != PROGHEADER_CRC)
-		Host_Error ("progs.dat system vars have been modified, progdefs.h is out of date");
-
-	pr_functions = (dfunction_t *)((byte *)progs + progs->ofs_functions);
-	pr_strings = (char *)progs + progs->ofs_strings;
-	pr_globaldefs = (ddef_t *)((byte *)progs + progs->ofs_globaldefs);
-	pr_fielddefs = (ddef_t *)((byte *)progs + progs->ofs_fielddefs);
-	pr_statements = (dstatement_t *)((byte *)progs + progs->ofs_statements);
-
-	pr_global_struct = (globalvars_t *)((byte *)progs + progs->ofs_globals);
-	pr_globals = (float *)pr_global_struct;
-	
-	pr_edict_size = progs->entityfields * 4 + sizeof (edict_t) - sizeof(entvars_t);
-	
-// byte swap the lumps
-	for (i=0 ; i<progs->numstatements ; i++)
-	{
-		pr_statements[i].op = LittleShort(pr_statements[i].op);
-		pr_statements[i].a = LittleShort(pr_statements[i].a);
-		pr_statements[i].b = LittleShort(pr_statements[i].b);
-		pr_statements[i].c = LittleShort(pr_statements[i].c);
-	}
-
-	for (i=0 ; i<progs->numfunctions; i++)
-	{
-	pr_functions[i].first_statement = LittleLong (pr_functions[i].first_statement);
-	pr_functions[i].parm_start = LittleLong (pr_functions[i].parm_start);
-	pr_functions[i].s_name = LittleLong (pr_functions[i].s_name);
-	pr_functions[i].s_file = LittleLong (pr_functions[i].s_file);
-	pr_functions[i].numparms = LittleLong (pr_functions[i].numparms);
-	pr_functions[i].locals = LittleLong (pr_functions[i].locals);
-	}	
-
-	for (i=0 ; i<progs->numglobaldefs ; i++)
-	{
-		pr_globaldefs[i].type = LittleShort (pr_globaldefs[i].type);
-		pr_globaldefs[i].ofs = LittleShort (pr_globaldefs[i].ofs);
-		pr_globaldefs[i].s_name = LittleLong (pr_globaldefs[i].s_name);
-	}
-
-	for (i=0 ; i<progs->numfielddefs ; i++)
-	{
-		pr_fielddefs[i].type = LittleShort (pr_fielddefs[i].type);
-		if (pr_fielddefs[i].type & DEF_SAVEGLOBAL)
-			Sys_Error ("PR_LoadProgs: pr_fielddefs[i].type & DEF_SAVEGLOBAL");
-		pr_fielddefs[i].ofs = LittleShort (pr_fielddefs[i].ofs);
-		pr_fielddefs[i].s_name = LittleLong (pr_fielddefs[i].s_name);
-	}
-
-	for (i=0 ; i<progs->numglobals ; i++)
-		((int *)pr_globals)[i] = LittleLong (((int *)pr_globals)[i]);
 }
 
 /*

@@ -137,7 +137,9 @@ void PF_vectorvectors (void)
 =================
 PF_setorigin
 
-This is the only valid way to move an object without using the physics of the world (setting velocity and waiting).  Directly changing origin will not set internal links correctly, so clipping would be messed up.  This should be called when an object is spawned, and then only if it is teleported.
+This is the only valid way to move an object without using the physics of the world (setting velocity and waiting).  
+Directly changing origin will not set internal links correctly, so clipping would be messed up.  
+This should be called when an object is spawned, and then only if it is teleported.
 
 setorigin (entity, origin)
 =================
@@ -588,10 +590,10 @@ Larger attenuations will drop off.
 */
 void PF_sound (void)
 {
-	char		*sample;
+	char	*sample;
 	int		channel, volume;
-	edict_t		*entity;
-	float		attenuation;
+	edict_t	*entity;
+	float	attenuation;
 		
 	entity = G_EDICT(OFS_PARM0);
 	channel = G_FLOAT(OFS_PARM1);
@@ -1641,10 +1643,13 @@ void PF_makestatic (void)
 //this bugs out teleporters and skip textures in 'in the shadows'	
 /*
 //johnfitz -- don't send invisible static entities
-	if (ent->alpha < ENTALPHA_ZERO) 
+	if (sv.protocol == PROTOCOL_FITZQUAKE)
 	{
-		ED_Free (ent);
-		return;
+		if (ent->alpha < ENTALPHA_ZERO) 
+		{
+			ED_Free (ent);
+			return;
+		}
 	}
 	//johnfitz
 */

@@ -122,7 +122,7 @@ void CL_FreeMove (void)
 
 	fmove = cl.cmd.forwardmove;
 	smove = cl.cmd.sidemove;
-
+	
 	for (i=0 ; i<3 ; i++)
 		wishvel[i] = forward[i]*fmove + right[i]*smove;
 
@@ -360,7 +360,7 @@ void CL_Stop_f (void)
 	fclose (cls.demofile);
 	cls.demofile = NULL;
 	cls.demorecording = false;
-	Con_Printf ("Completed demo\n");
+	Con_Printf ("Completed demo.\n");
 }
 
 /*
@@ -785,6 +785,7 @@ void CL_PlayDemo_f (void)
 		Cbuf_AddText ("menu_demos\n");
 		return;
 	}
+
 /*
 	if (Cmd_Argc() != 2)
 	{

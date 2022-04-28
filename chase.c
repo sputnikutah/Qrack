@@ -135,7 +135,7 @@ void Chase_Update (void)
 			cl_entities[cl.viewentity].transparency = 1.0;
 
 		//R00k, this prevents the camera from poking into the wall by rounding off the traceline... zNear clipping plane must be set to 1 in MYgluPerspective
-		LerpVector (r_refdef.vieworg, chase_dest, 0.9f, chase_dest);
+		LerpVector (r_refdef.vieworg, stop, 0.5f, chase_dest);
 	}
 
 	VectorCopy (chase_dest, r_refdef.vieworg);	

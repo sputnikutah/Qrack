@@ -46,11 +46,11 @@ double		realtime;				// without any filtering or bounding
 double		oldrealtime;			// last frame run
 double		last_angle_time;		// JPG - for smooth chasecam (from Proquake)
 
-int			host_framecount;
+int		host_framecount;
 
-int			host_hunklevel;
+int		host_hunklevel;
 
-int			minimum_memory;
+int		minimum_memory;
 
 client_t	*host_client;			// current client
 
@@ -59,39 +59,40 @@ jmp_buf 	host_abortserver;
 byte		*host_basepal;
 byte		*host_colormap;
 
-int			fps_count;
+int		fps_count;
 
 qboolean	config_lock;//R00k: added for cl_loadmapcfg
 
-cvar_t	host_maxfps 	= {"host_maxfps", "72",false};		// LordHavoc: framerate upper cap
-cvar_t	host_framerate	= {"host_framerate", "0"};			// set for slow motion
-cvar_t	host_speeds		= {"host_speeds", "0"};				// set for running times
-cvar_t	max_edicts		= {"max_edicts", "1024", true}; //johnfitz
-cvar_t	sys_ticrate		= {"sys_ticrate", "0.025"};		//This is only for dedicated servers.
+cvar_t	host_maxfps     = {"host_maxfps", "72",false};  // LordHavoc: framerate upper cap
+cvar_t	host_framerate	= {"host_framerate", "0"};		// set for slow motion
+cvar_t	host_speeds	    = {"host_speeds", "0"};			// set for running times
+cvar_t	max_edicts	    = {"max_edicts", "8192", true};	// johnfitz
+cvar_t	sys_ticrate	    = {"sys_ticrate", "0.025"};		// This is only for dedicated servers.
 cvar_t	serverprofile	= {"serverprofile", "0"};
-cvar_t	fraglimit		= {"fraglimit", "0", false, false};
-cvar_t	timelimit		= {"timelimit", "0", false, false};	//r00k changed notify to false; spams during matchtime change
-cvar_t	teamplay		= {"teamplay", "0", false, false};
-cvar_t	samelevel		= {"samelevel", "0"};
-cvar_t	noexit			= {"noexit", "0", false, true};
+cvar_t	fraglimit       = {"fraglimit", "0", false, false};
+cvar_t	timelimit       = {"timelimit", "0", false, false};	// r00k changed notify to false; spams during matchtime change
+cvar_t	teamplay        = {"teamplay", "0", false, false};
+cvar_t	samelevel       = {"samelevel", "0"};
+cvar_t	noexit          = {"noexit", "0", false, true};
 
-cvar_t	developer		= {"developer", "0"};
+cvar_t	developer                       = {"developer", "0"};
+cvar_t	developer_tool_texture_point    = {"developer_tool_texture_point","0",false};
+cvar_t	developer_tool_showbboxes       = {"developer_tool_showbboxes","0",false};
+cvar_t	developer_tool_show_edict_tags  = {"developer_tool_show_edict_tags","0",false};
 
-cvar_t	developer_tool_texture_point	= {"developer_tool_texture_point","0",false};
-cvar_t	developer_tool_showbboxes		= {"developer_tool_showbboxes","0",false};
-cvar_t	developer_tool_show_edict_tags	= {"developer_tool_show_edict_tags","0",false};
-
-cvar_t	skill			= {"skill", "1",false,false};		// 0 - 3
-cvar_t	deathmatch		= {"deathmatch", "0"};				// 0, 1, or 2
-cvar_t	coop			= {"coop", "0"};					
-cvar_t	pausable		= {"pausable", "1"};
-cvar_t	temp1			= {"temp1", "0"};
+cvar_t	skill		= {"skill", "1",false,false}; // 0 - 3
+cvar_t	deathmatch	= {"deathmatch", "0"}; // 0, 1, or 2
+cvar_t	coop		= {"coop", "0"};					
+cvar_t	pausable	= {"pausable", "1"};
+cvar_t	temp1		= {"temp1", "0"};
 
 void Host_WriteConfig_f (void);
 
 extern cvar_t	r_fullbright;
 extern cvar_t	r_draworder;
+#ifndef GLQUAKE
 extern cvar_t	r_drawflat;
+#endif
 extern cvar_t	r_ambient;
 
 // JPG - spam protection.  If a client's msg's/second exceeds spam rate
@@ -101,19 +102,12 @@ extern cvar_t	r_ambient;
 // message per pq_spam_rate seconds.
 cvar_t	pq_spam_rate = {"pq_spam_rate", "1.5"};
 cvar_t	pq_spam_grace = {"pq_spam_grace", "10"};
+cvar_t	pq_tempmute	= {"pq_tempmute", "1"};		// JPG 3.20 - control muting of players that change colour/name
+cvar_t	pq_logbinds	= {"pq_logbinds", "0"};		// JPG 3.20 - optionally write player binds to server log
+cvar_t	pq_showedict = {"pq_showedict", "0"};	// JPG 3.11 - feature request from Slot Zero
+cvar_t	pq_dequake = {"pq_dequake", "1"};		// JPG 1.05 - translate dedicated server console output to plain text
 
-// JPG 3.20 - control muting of players that change colour/name
-cvar_t	pq_tempmute = {"pq_tempmute", "1"};
-
-// JPG 3.20 - optionally write player binds to server log
-cvar_t	pq_logbinds = {"pq_logbinds", "0"};
-
-// JPG 3.11 - feature request from Slot Zero
-cvar_t	pq_showedict = {"pq_showedict", "0"};
-
-// JPG 1.05 - translate dedicated server console output to plain text
-cvar_t	pq_dequake = {"pq_dequake", "1"};
-
+extern cvar_t cl_independentphysics;
 /*
 ================
 Max_Edicts_f -- johnfitz
@@ -132,6 +126,7 @@ void Max_Edicts_f (void)
 		Con_Printf ("changes will not take effect until the next level load.\n");
 
 	oldval = max_edicts.value;
+	return;
 }
 
 /*
@@ -157,6 +152,12 @@ void Host_EndGame (char *message, ...)
 	
 	if (cls.demonum == -1 || !CL_NextDemo())
 		CL_Disconnect ();
+
+	if (cls.demonum != -1)
+	{
+		CL_StopPlayback ();	// JPG 1.05 - patch by CSR to fix crash
+		CL_NextDemo ();
+	}
 
 	longjmp (host_abortserver, 1);
 }
@@ -388,6 +389,22 @@ void Host_WriteConfig (char *cfgname)
 	extern cvar_t vid_bpp, cfg_savealias;
 	extern qboolean Cmd_WriteAliases_f (FILE *f);
 
+	char	str[80], *format;
+	time_t	t;
+	struct tm *ptm;
+
+	if (scr_viewsize.value >= 120.0)//??
+		return;
+
+	format = "%c";
+
+	time (&t);
+
+	if ((ptm = localtime(&t)))
+		strftime (str, sizeof(str) - 1, format, ptm);
+	else
+		strcpy(str, "#bad date#");
+
 	if (host_initialized && !isDedicated)	// 1999-12-24 logical correction by Maddes
 	{
 		if (!(f = fopen(va("%s/%s", com_gamedir, cfgname), "w")))
@@ -399,7 +416,7 @@ void Host_WriteConfig (char *cfgname)
 		VID_SyncCvars (); //johnfitz -- write actual current mode to config file, in case cvars were messed with
 	
 		fprintf (f, "// Generated by Qrack\n");
-		fprintf (f, "// %s: "__TIME__" "__DATE__"\n", cfgname);
+		fprintf (f, "// %s: %s \n", cfgname, str);
 		fprintf (f, "\n// Key bindings\n");
 		Key_WriteBindings (f);
 		
@@ -691,24 +708,6 @@ void Host_ClearMemory (void)
 	Con_DPrintf (1,"Client struct Cleared Successfully\n");
 }
 
-/*
-===================
-Host_GetConsoleCommands
-
-Add them exactly as if they had been typed at the console
-===================
-*/
-void Host_GetConsoleCommands (void)
-{
-	char	*cmd;
-
-	while (1)
-	{
-		if (!(cmd = Sys_ConsoleInput()))
-			break;
-		Cbuf_AddText (cmd);
-	}
-}
 
 /*
 ===================
@@ -717,20 +716,20 @@ Host_FilterTime
 Returns false if the time is too short to run a frame
 ===================
 */
+double	fps;
 
 qboolean Host_FilterTime (double time)
 {
-	double	fps;
-	extern	cvar_t	vid_refreshrate, m_filter,	m_rate, vid_vsync;
+	extern	cvar_t	vid_refreshrate, vid_vsync;
 
 	realtime += time;
 
-	if (sv.active == true)
-		fps = host_maxfps.value;
-	else
-		fps = max(10, (vid_vsync.value ? vid_refreshrate.value : cl_maxfps.value));
+	fps = max(10, (vid_vsync.value ? vid_refreshrate.value : cl_maxfps.value));
 
-	if (!cls.capturedemo && !cls.timedemo && ((realtime - oldrealtime) < (1 / fps)))
+//	if (key_dest != key_game)//R00k: if not 'in-game' then cap fps at 72.
+//		fps = 72;
+
+	if (!cls.capturedemo && !cls.timedemo && ((realtime - oldrealtime) < (1.0 / fps)))
 	{		
 		return false;
 	}
@@ -755,6 +754,49 @@ qboolean Host_FilterTime (double time)
 	return true;
 }
 
+/*
+=================
+CL_AccumulateCmd
+
+Spike: split from CL_SendCmd, to do clientside viewangle changes separately from outgoing packets.
+=================
+*/
+
+void CL_AccumulateCmd (void)
+{
+	extern void CL_AdjustAngles (void);
+	//usercmd_t dummy;
+	if (cls.signon == SIGNONS)
+	{
+		//basic keyboard looking
+		CL_AdjustAngles ();
+
+		//accumulate movement from other devices
+		IN_Move (&cl.pendingcmd);
+	}
+}
+
+/*
+===================
+Host_GetConsoleCommands
+
+Add them exactly as if they had been typed at the console
+===================
+*/
+void Host_GetConsoleCommands (void)
+{
+	char	*cmd;
+	if (!isDedicated)
+		return;	// no stdin necessary in graphical mode
+
+	while (1)
+	{
+		if (!(cmd = Sys_ConsoleInput()))
+			break;
+		Cbuf_AddText (cmd);
+	}
+}
+
 
 /*
 ==================
@@ -763,16 +805,8 @@ Host_ServerFrame
 */
 void Host_ServerFrame (void)
 {
-	// joe, from ProQuake: stuff the port number into the server console once every minute
-	static	double	port_time = 0;
 	int		i, active; //johnfitz
 	edict_t	*ent; //johnfitz
-
-	if (port_time > sv.time + 1 || port_time < sv.time - 60)
-	{
-		port_time = sv.time;
-		Cmd_ExecuteString (va("port %d\n", net_hostport), src_command);
-	}
 
 	// run the world state	
 	pr_global_struct->frametime = host_frametime;
@@ -790,7 +824,8 @@ void Host_ServerFrame (void)
 	// always pause in single player if in console or menus
 	if (!sv.paused && (svs.maxclients > 1 || key_dest == key_game))
 		SV_Physics ();
-//johnfitz -- devstats
+
+	//johnfitz -- devstats
 	if (cls.signon == SIGNONS)
 	{
 		for (i=0, active=0; i<sv.num_edicts; i++)
@@ -805,7 +840,7 @@ void Host_ServerFrame (void)
 		}
 
 	}
-//johnfitz
+	//johnfitz
 
 	// send all messages to the clients
 	SV_SendClientMessages ();
@@ -819,10 +854,10 @@ Runs all active servers
 ==================
 */
 void _Host_Frame (double time)
-{
-	static	double	time1 = 0, time2 = 0, time3 = 0;
+{	
 	int		pass1,	pass2, pass3;
-
+	static	double	time1 = 0, time2 = 0, time3 = 0, accumulated = 0;
+	
 	if (setjmp(host_abortserver))
 		return;		// something bad happened, or the server disconnected
 
@@ -830,6 +865,13 @@ void _Host_Frame (double time)
 	if (!cls.demoplayback)
 		rand ();
 
+	if (sv.active)	//Don't accumulate before we start.
+	{
+		if (cl_independentphysics.value)
+			accumulated += CLAMP(0, time, 0.2);
+		else
+			accumulated = 0.0;
+	}
 
 	// decide the simulation time
 	if (!Host_FilterTime(time))
@@ -837,45 +879,52 @@ void _Host_Frame (double time)
 		// JPG - if we're not doing a frame, still check for lagged moves to send
 		if (!sv.active && (cl.movemessages > 2))
 			CL_SendLagMove ();
-
+	
 		return;	// don't run too fast, or packets will flood out
-	}	
-
+	}	 
 	// get new key events
 	Sys_SendKeyEvents ();
 
 	// allow joystick or other external controllers to add commands
 	IN_Commands ();
 
+	// check for commands typed to the host
+	Host_GetConsoleCommands ();
+
 	// process console commands
 	Cbuf_Execute ();
 
 	NET_Poll ();
 
+	CL_AccumulateCmd ();//Spike
+
 	// if running the server locally, make intentions now
 	if (sv.active)
-	{
-		CL_SendCmd ();
+	{		
+		if (cl_independentphysics.value)//Spike: Run the server+networking (client->server->client), at a different rate from everything else. //https://gafferongames.com/post/fix_your_timestep/
+		{
+			double delta = 0.013889f;//72fps
+
+			while (accumulated >= delta)//R00k: changed to while, was if
+			{
+				float realframetime = host_frametime;
+
+				accumulated -= delta;
+				host_frametime = delta;
+				CL_SendCmd ();		
+				Host_ServerFrame ();
+
+				host_frametime = realframetime;
+
+				Cbuf_Waited();
+			}
+		}
+		else
+		{			
+			CL_SendCmd ();
+			Host_ServerFrame ();
+		}
 	}
-//-------------------
-//
-// server operations
-//
-//-------------------
-
-	// check for commands typed to the host
-	Host_GetConsoleCommands ();
-
-	if (sv.active)
-	{
-		Host_ServerFrame ();
-	}
-
-//-------------------
-//
-// client operations
-//
-//-------------------
 
 	// if running the server remotely, send intentions now after
 	// the incoming messages have been read
@@ -949,10 +998,10 @@ void _Host_Frame (double time)
 
 void Host_Frame (double time)
 {
-	double		time1, time2;
+	double			time1, time2;
 	static	double	timetotal;
-	static	int	timecount;
-	int		i, c, m;
+	static	int		timecount;
+	int				i, c, m;
 
 	if (!serverprofile.value)
 	{
@@ -1144,7 +1193,7 @@ void Host_Init (quakeparms_t *parms)
 	
 	Con_Printf ("Exe: "__TIME__" "__DATE__"\n");
 	Con_Printf ("Hunk allocation: %4.1f MB\n", (float)parms->memsize / (1024 * 1024));
-	Con_Printf ("\nQrack version %s\n\n", VersionString());
+	Con_Printf ("\nQrack %s\n\n", VersionString());
 	// modified from Sys_Printf() by joe
 	Con_Printf ("\n\x1d\x1e\x1e\x1e\x1e\x1e\x1e\x1e Qrack Initialized \x1e\x1e\x1e\x1e\x1e\x1e\x1e\x1f\n");
 

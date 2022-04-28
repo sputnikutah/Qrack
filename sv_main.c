@@ -27,10 +27,10 @@ server_static_t		svs;
 
 char	localmodels[MAX_MODELS][6];	// inline model names for precache
 
-cvar_t	sv_mapname			= {"mapname", ""};
-cvar_t	sv_defaultmap		= {"sv_defaultmap","start"};//R00k
-cvar_t	sv_cullentities		= {"sv_cullentities","0", false, true};
-cvar_t  sv_progs			= {"sv_progs", "progs.dat" };//Baker
+cvar_t	sv_mapname	= {"mapname", ""};
+cvar_t	sv_defaultmap	= {"sv_defaultmap","start"};//R00k
+cvar_t	sv_cullentities	= {"sv_cullentities","0", false, true};
+cvar_t  sv_progs	= {"sv_progs", "progs.dat" };//Baker
 
 int sv_protocol = PROTOCOL_FITZQUAKE; //johnfitz
 qboolean pr_alpha_supported;
@@ -194,7 +194,7 @@ void SV_StartSound (edict_t *entity, int channel, char *sample, int volume, floa
 	if (attenuation != DEFAULT_SOUND_PACKET_ATTENUATION)
 		field_mask |= SND_ATTENUATION;
 
-		//johnfitz -- PROTOCOL_FITZQUAKE
+	//johnfitz -- PROTOCOL_FITZQUAKE
 	if (ent >= 8192)
 	{
 		if (sv.protocol == PROTOCOL_NETQUAKE)
@@ -498,6 +498,7 @@ qboolean SV_InvisibleToClient(edict_t *viewer, edict_t *seen)
 	extern qboolean CL_Clip_Test(vec3_t org);
 	int it;
 	int vi;
+
 	if (svs.maxclients == 1)//Ok so, singleplayer saved games crash with this enabled.
 		return false;
 
@@ -515,8 +516,9 @@ qboolean SV_InvisibleToClient(edict_t *viewer, edict_t *seen)
 	}	
 
 	if (sv_cullentities.value == 1)    //1 only check player models, 2 = check all ents
-	{
+	{		
 		if (strcmp(pr_strings + seen->v.classname, "player"))
+		//Fixme: visible if deadbody so cl_colordeadbodies works.
 			return false;
 	}
 
@@ -539,9 +541,9 @@ qboolean SV_InvisibleToClient(edict_t *viewer, edict_t *seen)
     start[2] = viewer->v.origin[2] + viewer->v.view_ofs[2];
 
     //aim straight at the center of "seen" from our eyes
-    end[0] = 0.5 * (seen->v.mins[0] + seen->v.maxs[0]);
-    end[1] = 0.5 * (seen->v.mins[1] + seen->v.maxs[1]);
-    end[2] = 0.5 * (seen->v.mins[2] + seen->v.maxs[2]);            
+    end[0] = seen->v.origin[0] + (0.5 * (seen->v.mins[0] + seen->v.maxs[0]));
+    end[1] = seen->v.origin[1] + (0.5 * (seen->v.mins[1] + seen->v.maxs[1]));
+    end[2] = seen->v.origin[2] + (0.5 * (seen->v.mins[2] + seen->v.maxs[2]));            
 
     tr = SV_ClipMoveToEntity (sv.edicts, start, vec3_origin, vec3_origin, end);
 
@@ -662,7 +664,7 @@ void SV_WriteEntitiesToClient (edict_t	*client, sizebuf_t *msg)
 	eval_t  *val;
 #endif
 
-	if (cl.protocol == PROTOCOL_NETQUAKE)
+	if (sv.protocol == PROTOCOL_NETQUAKE)
 	{
 		if (18 > (msg->maxsize - msg->cursize))//R00k: Message wont fit in this packet...
 		{
@@ -750,22 +752,34 @@ void SV_WriteEntitiesToClient (edict_t	*client, sizebuf_t *msg)
 		if (ent->baseline.modelindex != ent->v.modelindex)
 			bits |= U_MODEL;
 
-		//johnfitz -- alpha
-		if (pr_alpha_supported)//the actual progs.dat has a .alpha field defined.
+		if (sv_protocol == PROTOCOL_FITZQUAKE)
 		{
-			eval_t	*val;
-			val = GETEDICTFIELDVALUE(ent, eval_alpha);
-			if (val)
+			//johnfitz -- alpha
+			if (pr_alpha_supported)//the actual progs.dat has a .alpha field defined.
 			{
-				if (((val->_float) < 1) && ((val->_float) > 0))
+				eval_t* val;
+				val = GETEDICTFIELDVALUE(ent, eval_alpha);
+				if (val)
 				{
-					alpha = ENTALPHA_ENCODE(val->_float);
-					bits |= U_ALPHA;	
-					trans = val->_float;	
+					if (((val->_float) < 1) && ((val->_float) > 0))
+					{
+						alpha = ENTALPHA_ENCODE(val->_float);
+						bits |= U_ALPHA;
+						trans = val->_float;
+					}
+
 				}
-				
 			}
 		}
+		else
+		{
+			// nehahra: model alpha
+			if ((val = GETEDICTFIELDVALUE(ent, eval_alpha)))
+				trans = val->_float;
+			else
+				trans = 1;
+		}
+
 		if ((val = GETEDICTFIELDVALUE(ent, eval_fullbright)))
 			fullbright = val->_float;
 		else
@@ -1447,8 +1461,7 @@ void SV_SpawnServer (char *server)
     char *entitystring = NULL;
 	int		i;
 	extern void R_PreMapLoad (char *);	// joe
-	//extern void PR_Load_QCCX_Progs (void);
-
+	
 #ifdef GLQUAKE
 	if (nehahra)
 	{
@@ -1498,11 +1511,7 @@ void SV_SpawnServer (char *server)
 
 	sv.protocol = sv_protocol; // johnfitz
 
-// load progs to get entity field count
-/*	if (sv_protocol == 15)
-		PR_Load_QCCX_Progs();
-	else*/
-		PR_LoadProgs ();
+	PR_LoadProgs ();
 
 // allocate server memory
 	sv.max_edicts = MAX_EDICTS;

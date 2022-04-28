@@ -22,9 +22,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //#define	QUAKE_GAME			// as opposed to utilities
 
-#define	SERVER_VERSION			2.018
+#define	SERVER_VERSION			2.020
 
-#define QRACK_VERSION			"2.018"
+#define QRACK_VERSION			"(x86_32)"
 
 #define MOD_PROQUAKE_VERSION	3.50 //PQ Compatibility
 
@@ -104,36 +104,36 @@ void	VID_UnlockBuffer (void);
 
 // stats are integers communicated to the client by the server
 #define	MAX_CL_STATS		32
-#define	STAT_HEALTH			0
-#define	STAT_FRAGS			1
-#define	STAT_WEAPON			2
-#define	STAT_AMMO			3
-#define	STAT_ARMOR			4
+#define	STAT_HEALTH		0
+#define	STAT_FRAGS		1
+#define	STAT_WEAPON		2
+#define	STAT_AMMO		3
+#define	STAT_ARMOR		4
 #define	STAT_WEAPONFRAME	5
-#define	STAT_SHELLS			6
-#define	STAT_NAILS			7
+#define	STAT_SHELLS		6
+#define	STAT_NAILS		7
 #define	STAT_ROCKETS		8
-#define	STAT_CELLS			9
+#define	STAT_CELLS		9
 #define	STAT_ACTIVEWEAPON	10
 #define	STAT_TOTALSECRETS	11
 #define	STAT_TOTALMONSTERS	12
 #define	STAT_SECRETS		13		// bumped on client side by svc_foundsecret
 #define	STAT_MONSTERS		14		// bumped by svc_killedmonster
-#define STAT_TEMP			15
-#define	STAT_ITEMS			15
+#define STAT_TEMP		15
+#define	STAT_ITEMS		15
 #define	STAT_VIEWHEIGHT		16
 
 // stock defines
 
-#define	IT_SHOTGUN				1
+#define	IT_SHOTGUN			1
 #define	IT_SUPER_SHOTGUN		2
-#define	IT_NAILGUN				4
+#define	IT_NAILGUN			4
 #define	IT_SUPER_NAILGUN		8
 #define	IT_GRENADE_LAUNCHER		16
 #define	IT_ROCKET_LAUNCHER		32
 #define	IT_LIGHTNING			64
 //#define IT_SUPER_LIGHTNING      128
-#define IT_HOOK					128//R00k added hook instead
+#define IT_HOOK			128//R00k added hook instead
 #define IT_SHELLS               256
 #define IT_NAILS                512
 #define IT_ROCKETS              1024
@@ -145,14 +145,26 @@ void	VID_UnlockBuffer (void);
 #define IT_SUPERHEALTH          65536
 #define IT_KEY1                 131072
 #define IT_KEY2                 262144
-#define	IT_INVISIBILITY			524288
-#define	IT_INVULNERABILITY		1048576
-#define	IT_SUIT					2097152
-#define	IT_QUAD					4194304
+#define	IT_INVISIBILITY		524288
+#define	IT_INVULNERABILITY	1048576
+#define	IT_SUIT			2097152
+#define	IT_QUAD			4194304
 #define IT_SIGIL1               (1<<28)
 #define IT_SIGIL2               (1<<29)
 #define IT_SIGIL3               (1<<30)
 #define IT_SIGIL4               (1<<31)
+
+//Malice defines
+/*
+#define IT_44              = 4096;
+#define IT_SHOT            = 1;
+#define IT_SHOT2           = 2;
+#define IT_UZI             = 4;
+#define IT_MINI            = 8;
+#define IT_MORTER          = 16;
+#define IT_ROCKET          = 32;
+#define IT_PUNISHER        = 64;
+*/
 
 //===========================================
 //rogue changed and added defines
@@ -306,7 +318,7 @@ void Host_ClientCommands (char *fmt, ...);
 void Host_ShutdownServer (qboolean crash);
 
 extern qboolean		msg_suppress_1;		// suppresses resolution and cache size console output
-										// an fullscreen DIB focus gain/loss
+										// a fullscreen DIB focus gain/loss
 extern int		current_skill;			// skill level for currently loaded level (in case
 										// the user changes the cvar while the level is
 										// running, this reflects the level actually in use)

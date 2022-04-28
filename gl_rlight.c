@@ -236,10 +236,14 @@ DYNAMIC LIGHTS
 
 void R_MarkLights (dlight_t *light, int num, mnode_t *node)
 {
-   mplane_t   *splitplane;
+	mplane_t   *splitplane;
    float      dist;
    msurface_t   *surf;
    int         i;
+   	// jkrige - fix dynamic light shine through
+	int			sidebit;
+	// jkrige - fix dynamic light shine through
+
 
    if (node->contents < 0)
       return;
@@ -264,6 +268,16 @@ void R_MarkLights (dlight_t *light, int num, mnode_t *node)
 
    for (i = 0; i < node->numsurfaces; i++, surf++)
    {
+	   {// jkrige - fix dynamic light shine through
+			if (dist >= 0)
+				sidebit = 0;
+			else
+				sidebit = SURF_PLANEBACK;
+
+			if ( (surf->flags & SURF_PLANEBACK) != sidebit )
+				continue;
+		}
+
       if (surf->dlightframe != r_framecount)
       {
          memset (surf->dlightbits, 0, sizeof (surf->dlightbits));

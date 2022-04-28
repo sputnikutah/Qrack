@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 cvar_t	pq_teamscores		= {"pq_teamscores", "1",true}; // JPG - show teamscores
 cvar_t	pq_timer			= {"pq_timer", "1",true}; // JPG - show timer
+
 cvar_t	pq_scoreboard_pings = {"pq_scoreboard_pings", "1",true};	// JPG - show ping times in the scoreboard
 
 int		sb_updates;		// if >= vid.numpages, no update needed
@@ -47,6 +48,7 @@ mpic_t	*sb_faces[5][2];		// 0 is dead, 1-4 are alive
 mpic_t	*sb_face_invis;
 mpic_t	*sb_face_quad;
 mpic_t	*sb_face_invuln;
+//mpic_t		*sb_face_invuln_quad;
 mpic_t	*sb_face_invis_invuln;
 
 qboolean	sb_showscores;
@@ -72,10 +74,16 @@ void Sbar_DeathmatchOverlay (void);
 
 // by joe
 int	sbar_xofs;
-cvar_t	scr_centersbar			= {"scr_centersbar", "0",true};
+cvar_t	scr_centersbar			= {"scr_centersbar", "1",true};
 cvar_t	scr_sbaralpha			= {"scr_sbaralpha",	"0.5",true};
+cvar_t	scr_sbar_drawfrags		= {"scr_sbar_drawfrags", "1", true};
 cvar_t	scr_printstats			= {"scr_printstats", "0",true};
 cvar_t	scr_printstats_style	= {"scr_printstats_style", "0",true};
+cvar_t	scr_printstats_timer_x	= {"scr_printstats_timer_x", "120",true};
+cvar_t	scr_printstats_timer_y	= {"scr_printstats_timer_y", "0",true};
+cvar_t	scr_printstats_score_x	= {"scr_printstats_score_x", "132",true};
+cvar_t	scr_printstats_score_y	= {"scr_printstats_score_y", "0",true};
+
 cvar_t	scr_printstats_length	= {"scr_printstats_length", "0.5",true};
 cvar_t	scr_scoreboard_fillalpha = {"scr_scoreboard_fillalpha", "0.8"};//R00k
 //cvar_t	scr_scoreboard_fillcolor = {"scr_scoreboard_fillcolor", "0xffffff"};//R00k
@@ -310,6 +318,8 @@ void Sbar_Init (void)
 	sb_face_invuln = Draw_PicFromWad ("face_invul2");
 	sb_face_invis_invuln = Draw_PicFromWad ("face_inv2");
 	sb_face_quad = Draw_PicFromWad ("face_quad");
+//sb_face_invuln_quad = Draw_PicFromWad ("face_invul1");//todo
+
 
 	
 	sb_sbar = Draw_PicFromWad ("sbar");
@@ -330,8 +340,13 @@ void Sbar_Init (void)
 		Cvar_RegisterVariable (&scr_printstats);
 		Cvar_RegisterVariable (&scr_printstats_style);
 		Cvar_RegisterVariable (&scr_printstats_length);
+		Cvar_RegisterVariable (&scr_printstats_timer_x);
+		Cvar_RegisterVariable (&scr_printstats_timer_y);
+		Cvar_RegisterVariable (&scr_printstats_score_x);
+		Cvar_RegisterVariable (&scr_printstats_score_y);
 		Cvar_RegisterVariable (&scr_scoreboard_fillalpha);
 		Cvar_RegisterVariable (&scr_sbaralpha);
+		Cvar_RegisterVariable (&scr_sbar_drawfrags);
 
 		Cmd_AddCommand ("+showscores", Sbar_ShowScores);
 		Cmd_AddCommand ("-showscores", Sbar_DontShowScores);
@@ -1174,121 +1189,105 @@ float	printstats_limit;
 SCR_PrintStats
 ===============
 Todo: allow end user to set the position of the output.
+fix demos without match time?
+this is a mess split up singleplayer and multiplayer
+
+single
+		small print
+		large print
+multiplayer
+		small print
+		large print
 */
 
 void SCR_PrintStats (void)
 {
-	int		mins, secs, tens;
+	int		mins = 0 , secs = 0, tens = 0;
 	int		match_time; // R00k
 	//---
 	int		i, k, l, f, top, bottom, colors, ent;
-	extern cvar_t	con_textsize;
 
-	mins = cl.ctime / 60;
-	secs = cl.ctime - 60 * mins;
-	tens = (int)(cl.ctime * 10) % 10;
+	vec3_t timepos, scorepos;
+
 	match_time = 0;
+
+	if (!(cl.teamgame)) //teamgame is true when a match has started.
+	{
+		mins = cl.ctime / 60;
+		secs = cl.ctime - 60 * mins;
+		tens = (int)(cl.ctime * 10) % 10;
+	}
 
 	if (cl.gametype == GAME_DEATHMATCH)
 	{
-		//if (pq_timer.value == 2)
-		{
-			if ((cl.minutes || cl.seconds) && (cl.minutes != 255))
-			{					
-				if (cl.match_pause_time)
-						match_time = ceil(60.0 * cl.minutes + cl.seconds - (cl.match_pause_time - cl.last_match_time));
-					else
-						match_time = ceil(60.0 * cl.minutes + cl.seconds - (cl.ctime - cl.last_match_time));
-
-				mins = match_time / 60;
-				secs = match_time - 60 * mins;
-
-				if (cl.match_pause_time)
-					tens = (int)(cl.match_pause_time * 10) % 10;
+		if ((cl.minutes || cl.seconds) && (cl.minutes != 255))
+		{					
+			if (cl.match_pause_time)
+					match_time = floor(60.0 * cl.minutes + cl.seconds - (cl.match_pause_time - cl.last_match_time));
 				else
-					tens = (int)(cl.ctime * 10) % 10;
-				
-				if (mins < 0) mins = 0;
-				if (secs < 0) secs = 0;
-				if (tens < 0) tens = 0;
+					match_time = floor(60.0 * cl.minutes + cl.seconds - (cl.ctime - cl.last_match_time));
+
+			mins = match_time / 60;
+			secs = match_time - 60 * mins;
+			
+			if (mins < 0) mins = 0;
+			if (secs < 0) secs = 0;
+		}
+		
+		if (scr_printstats_style.value == 0)
+		{
+		
+			timepos[0] = CLAMP(112, scr_printstats_timer_x.value, 640);
+			timepos[1] = CLAMP(0, scr_printstats_timer_y.value, 336);
+
+			scorepos[0] = CLAMP(112, scr_printstats_score_x.value, 640);
+			scorepos[1] = CLAMP(0, scr_printstats_score_y.value, 336);
+
+			if (mins > 0)
+			{				
+				Sbar_IntermissionNumber (vid.width - timepos[0] , timepos[1], mins, 2, 0);
+				Draw_TransPic (vid.width - (timepos[0]-48) , timepos[1], sb_colon);
+				Draw_TransPic (vid.width - (timepos[0]-64), timepos[1], sb_nums[0][secs/10]);
+				Draw_TransPic (vid.width - (timepos[0]-88), timepos[1], sb_nums[0][secs%10]);
 			}
-		}
-	}
+			else
+			{
+				Sbar_IntermissionNumber (vid.width - timepos[0] , timepos[1], mins, 2, 1);
+				Draw_TransPic (vid.width - (timepos[0]-48) , timepos[1], sb_colon);
+				Draw_TransPic (vid.width - (timepos[0]-64), timepos[1], sb_nums[1][secs/10]);
+				Draw_TransPic (vid.width - (timepos[0]-88), timepos[1], sb_nums[1][secs%10]);
+			}
+	
+			Sbar_SortTeamFrags();
+			l = scoreboardlines <= 4 ? scoreboardlines : 4;
 
-	if (scr_printstats_style.value == 0)
-	{
-		if (mins > 0)
-		{
-			Sbar_IntermissionNumber (vid.width - 140, 0, mins, 2, 0);
-			Draw_TransPic (vid.width - 92, 0, sb_colon);
+			//todo need to handle each team separately scr_printstats_score1_x scr_printstats_score2_x scr_printstats_score3_x scr_printstats_score4_x
+			for (i = 0 ; i < l ; i++)
+			{
+				k = fragsort[i];
+				colors = cl.teamscores[k].colors;
+				f = cl.teamscores[k].frags;
 
-			Draw_TransPic (vid.width - 80, 0, sb_nums[0][secs/10]);
-			Draw_TransPic (vid.width - 58, 0, sb_nums[0][secs%10]);
+				// draw background
+				top = (colors & 0xf0);
+				top = Sbar_ColorForMap (top);
 
-			Draw_TransPic (vid.width - 36, 0, sb_colon);
-			Draw_TransPic (vid.width - 24, 0, sb_nums[0][tens]);
-		}
-		else
-		{
-			Sbar_IntermissionNumber (vid.width - 140, 0, mins, 2, 1);
-			Draw_TransPic (vid.width - 92, 0, sb_colon);
+				bottom = (colors & 15)<<4;
+				bottom = Sbar_ColorForMap (bottom);
 
-			Draw_TransPic (vid.width - 80, 0, sb_nums[1][secs/10]);
-			Draw_TransPic (vid.width - 58, 0, sb_nums[1][secs%10]);
+				//Draw teamcolor markers
+				Draw_AlphaFill (vid.width - scr_printstats_score_x.value, (scr_printstats_score_y.value + 24) + (i*24), 128, 12, bottom, 0.5f);//was top
+				Draw_AlphaFill (vid.width - scr_printstats_score_x.value, (scr_printstats_score_y.value + 24) + (i*24) + 12, 128, 12, bottom, 0.5f);
 
-			Draw_TransPic (vid.width - 36, 0, sb_colon);
-			Draw_TransPic (vid.width - 24, 0, sb_nums[1][tens]);
-		}
-
-		//R00k added
-		if ((cl.gametype != GAME_DEATHMATCH))
-		{
-			Sbar_IntermissionNumber (vid.width - 48, 24, cl.stats[STAT_SECRETS], 2, 0);
-			Sbar_IntermissionNumber (vid.width - 72, 48, cl.stats[STAT_MONSTERS], 3, 0);
+				// draw scores
+				Sbar_IntermissionNumber ((vid.width - (scr_printstats_score_x.value - 24)), (scr_printstats_score_y.value + 24) + (i*24), f, 3, 0);
+			}				
 		}
 		else
 		{
 			if (cl.teamgame)
 			{
-				Sbar_SortTeamFrags();
-				l = scoreboardlines <= 4 ? scoreboardlines : 4;
-				for (i = 0 ; i < l ; i++)
-				{
-					k = fragsort[i];
-					colors = cl.teamscores[k].colors;
-					f = cl.teamscores[k].frags;
-
-					//TODO:cvar this as sometimes its buggy
-					// draw background
-					top = (colors & 0xf0);
-					top = Sbar_ColorForMap (top);
-
-					bottom = (colors & 15)<<4;
-					bottom = Sbar_ColorForMap (bottom);
-
-					//Draw teamcolor markers
-					Draw_AlphaFill (vid.width - 96, 24 + (i*24), 128, 12, bottom, 0.5f);//was top
-					Draw_AlphaFill (vid.width - 96, 24 + (i*24) + 12, 128, 12, bottom, 0.5f);
-
-					// draw scores
-					Sbar_IntermissionNumber (vid.width - 72, 24 + (i*24), f, 3, 0);
-				}				
-			}
-		}
-	}
-	else
-	{
-		Draw_String (vid.width - 64, 0, va("%2i:%02i:%i", mins, secs, tens), 0);
-
-		if ((cl.gametype != GAME_DEATHMATCH))
-		{
-			Draw_String (vid.width - 16, 8, va("%2i", cl.stats[STAT_SECRETS]), 0);
-			Draw_String (vid.width - 24, 16, va("%3i", cl.stats[STAT_MONSTERS]), 0);
-		}
-		else
-		{
-			if (cl.teamgame)
-			{
+				Draw_String (vid.width - 64, 0, va("%2i:%02i", mins, secs), 0);
 				ent = cl.viewentity - 1;
 				Sbar_SortTeamFrags();
 				l = scoreboardlines <= 4 ? scoreboardlines : 4;
@@ -1316,8 +1315,45 @@ void SCR_PrintStats (void)
 						Draw_Character (vid.width - 44,  8 + (i * 8), 16, 0);
 						Draw_Character (vid.width - 8, 8 + (i * 8), 17, 0);
 					}
-				}
+				}				
 			}
+		}
+	}
+	else
+	{
+		if (scr_printstats_style.value == 0)
+		{
+			if (mins > 0)
+			{
+				Sbar_IntermissionNumber (vid.width - 140, 0, mins, 2, 0);
+				Draw_TransPic (vid.width - 92, 0, sb_colon);
+
+				Draw_TransPic (vid.width - 80, 0, sb_nums[0][secs/10]);
+				Draw_TransPic (vid.width - 58, 0, sb_nums[0][secs%10]);
+
+				Draw_TransPic (vid.width - 36, 0, sb_colon);
+				Draw_TransPic (vid.width - 24, 0, sb_nums[0][tens]);
+			}
+			else
+			{
+				Sbar_IntermissionNumber (vid.width - 140, 0, mins, 2, 1);
+				Draw_TransPic (vid.width - 92, 0, sb_colon);
+
+				Draw_TransPic (vid.width - 80, 0, sb_nums[1][secs/10]);
+				Draw_TransPic (vid.width - 58, 0, sb_nums[1][secs%10]);
+
+				Draw_TransPic (vid.width - 36, 0, sb_colon);
+				Draw_TransPic (vid.width - 24, 0, sb_nums[1][tens]);
+			}
+
+			Sbar_IntermissionNumber (vid.width - 48, 24, cl.stats[STAT_SECRETS], 2, 0);
+			Sbar_IntermissionNumber (vid.width - 72, 48, cl.stats[STAT_MONSTERS], 3, 0);
+		}
+		else
+		{
+			Draw_String (vid.width - 64, 0 , va("%2i:%02i:%i", mins, secs, tens), 0);
+			Draw_String (vid.width - 16, 8 , va("%2i", cl.stats[STAT_SECRETS]), 0);
+			Draw_String (vid.width - 24, 16, va("%3i", cl.stats[STAT_MONSTERS]), 0);				
 		}
 	}
 }
@@ -1370,7 +1406,10 @@ void Sbar_Draw (void)
 			// joe
 			//if ((!headsup || vid.width<512) && cl.maxclients != 1)
 			if (cl.maxclients > 1)
-				Sbar_DrawFrags ();
+			{
+				if (scr_sbar_drawfrags.value) //R00k: (2020/04/7) 
+					Sbar_DrawFrags ();
+			}
 		}
 
 		// by joe

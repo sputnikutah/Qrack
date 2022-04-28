@@ -64,7 +64,7 @@ void CL_InitTEnts (void)
 	cl_sfx_r_exp3		= S_PrecacheSound ("weapons/r_exp3.wav");
 	cl_sfx_thunder		= S_PrecacheSound ("ambience/thunder1.wav");	
 	cl_sfx_step1		= S_PrecacheSound ("misc/step1.wav");	
-	cl_sfx_step2			= S_PrecacheSound ("misc/step2.wav");	
+	cl_sfx_step2		= S_PrecacheSound ("misc/step2.wav");	
 	cl_sfx_step3		= S_PrecacheSound ("misc/step3.wav");		
 	cl_sfx_step4		= S_PrecacheSound ("misc/step4.wav");	
 	cl_sfx_step5		= S_PrecacheSound ("misc/step5.wav");	
@@ -495,7 +495,7 @@ void CL_UpdateTEnts (void)
 			b->start[2] += cl.crouch;
 			b->start[2] += bound(-7, v_viewheight.value, 4);		
 			
-			if ((cl_truelightning.value) && (!cls.demorecording) && (!cls.demoplayback))
+			if ((cl_truelightning.value) && (!cls.demoplayback))
 			{
 				vec3_t	forward, v, org, ang;
 				float	f, delta;

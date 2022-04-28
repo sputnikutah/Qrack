@@ -22,6 +22,47 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+#ifdef USESHADERS
+// program.local[0] = up vector
+// program.local[1] = right vector
+// program.local[2] = -(r_origin * vpn) vector
+// program.local[3] = vpn vector
+// program.local[4] = scale vector
+// program.local[5] ... max = particle positions and colours
+#define particle_vp \
+	"!!ARBvp1.0\n" \
+	"TEMP pscale, ppos;\n" \
+	"MAD pscale, vertex.attrib[0], program.local[3], program.local[2];\n" \
+	"DPH pscale.w, pscale, program.local[4];\n" \
+	"MUL pscale, pscale.w, vertex.attrib[2];\n" \
+	"MAD ppos, program.local[0], pscale.x, vertex.attrib[0];\n" \
+	"MAD ppos, program.local[1], pscale.y, ppos;\n" \
+	TRANSFORMVERTEX ("result.position", "ppos") \
+	"MOV result.texcoord[0], vertex.attrib[2];\n" \
+	"MOV result.color, vertex.attrib[1];\n" \
+	"END\n"
+
+#define particle_fp \
+	"!!ARBfp1.0\n" \
+	"TEMP col0;\n" \
+	"MOV col0, fragment.color;\n" \
+	"DP3 col0.w, fragment.texcoord[0], fragment.texcoord[0];\n" \
+	"SUB col0.w, 1.0, col0.w;\n" \
+	"MUL result.color, col0, program.local[0];\n" \
+	"END\n"
+
+GLuint arb_particle_vp = 0;
+GLuint arb_particle_fp = 0;
+GLuint arb_particle_fp_fog = 0;
+
+void Part_CreateShaders (void)
+{
+	arb_particle_vp = GL_CreateProgram (GL_VERTEX_PROGRAM_ARB, particle_vp, false);
+	arb_particle_fp = GL_CreateProgram (GL_FRAGMENT_PROGRAM_ARB, particle_fp, false);
+	arb_particle_fp_fog = GL_CreateProgram (GL_FRAGMENT_PROGRAM_ARB, particle_fp, true);
+}
+#endif
+
 #ifdef GLQUAKE
 
 typedef enum
@@ -67,8 +108,8 @@ qboolean OnChange_r_particle_count (cvar_t *var, char *string)
 }
 
 cvar_t	r_particle_count = {"r_particle_count", "2048", true, false, OnChange_r_particle_count};
-cvar_t	r_particle_type	= {"r_particle_type", "1", true};//R00k particle type determines the shape of the particle. Circle or square. Default oldschool software shape square! :)
-cvar_t	r_particle_scale = {"r_particle_scale","1", true};//R00k static particle size.
+cvar_t	r_particle_type	= {"r_particle_type", "0", true};//R00k particle type determines the shape of the particle. Circle or square. Default oldschool software shape square! :)
+cvar_t	r_particle_scale = {"r_particle_scale","0", true};//R00k static particle size.
 
 static	int	ramp1[8] = {0x6f, 0x6d, 0x6b, 0x69, 0x67, 0x65, 0x63, 0x61};
 static	int	ramp2[8] = {0x6f, 0x6e, 0x6d, 0x6c, 0x6b, 0x6a, 0x68, 0x66};
@@ -854,7 +895,329 @@ void Classic_RocketTrail (vec3_t start, vec3_t end, int type)
 		VectorAdd (start, vec, start);
 	}
 }
+#ifdef USESHADERS
+/*
+===============
+CL_RunParticles -- johnfitz -- all the particle behavior, separated from R_DrawParticles
+===============
 
+void CL_RunParticlesForType (particle_type_t *pt)
+{
+	particle_t		*p, *kill;
+	int				i;
+	float			time1, time2, time3, dvel, frametime, grav;
+	extern	cvar_t	sv_gravity;
+
+	// nothing to run
+	if (!pt->numparticles) return;
+	if (!pt->particles) return;
+
+	frametime = fabs (cl.ctime - cl.oldtime);
+	time3 = frametime * 15;
+	time2 = frametime * 10;
+	time1 = frametime * 5;
+	grav = frametime * sv_gravity.value * 0.05;
+	dvel = 4 * frametime;
+
+	for (;;)
+	{
+		kill = pt->particles;
+
+		if (kill && kill->die < cl.time)
+		{
+			pt->particles = kill->next;
+			kill->next = free_particles;
+			free_particles = kill;
+			r_numparticles--;
+			pt->numparticles--;
+			continue;
+		}
+
+		break;
+	}
+
+	for (p = pt->particles; p; p = p->next)
+	{
+		for (;;)
+		{
+			kill = p->next;
+
+			if (kill && kill->die < cl.time)
+			{
+				p->next = kill->next;
+				kill->next = free_particles;
+				free_particles = kill;
+				r_numparticles--;
+				pt->numparticles--;
+				continue;
+			}
+
+			break;
+		}
+
+		p->org[0] += p->vel[0] * frametime;
+		p->org[1] += p->vel[1] * frametime;
+		p->org[2] += p->vel[2] * frametime;
+
+		p->alpha -= p->alphadec * frametime;
+
+		if (p->alpha <= 0) p->die = -1;
+
+		switch (p->type)
+		{
+		case pt_static:
+			break;
+
+		case pt_fire:
+			p->ramp += time1;
+
+			if (p->ramp >= 6)
+				p->die = -1;
+			else
+				p->color = ramp3[(int) p->ramp];
+
+			p->vel[2] += grav;
+			break;
+
+		case pt_explode:
+			p->ramp += time2;
+
+			if (p->ramp >= 8)
+				p->die = -1;
+			else
+				p->color = ramp1[(int) p->ramp];
+
+			for (i = 0; i < 3; i++)
+				p->vel[i] += p->vel[i] * dvel;
+
+			p->vel[2] -= grav;
+			break;
+
+		case pt_explode2:
+			p->ramp += time3;
+
+			if (p->ramp >= 8)
+				p->die = -1;
+			else
+				p->color = ramp2[(int) p->ramp];
+
+			for (i = 0; i < 3; i++)
+				p->vel[i] -= p->vel[i] * frametime;
+
+			p->vel[2] -= grav;
+			break;
+
+		case pt_blob:
+			for (i = 0; i < 3; i++)
+				p->vel[i] += p->vel[i] * dvel;
+
+			p->vel[2] -= grav;
+			break;
+
+		case pt_blob2:
+
+			for (i = 0; i < 2; i++)
+				p->vel[i] -= p->vel[i] * dvel;
+
+			p->vel[2] -= grav;
+			break;
+
+		case pt_grav:
+		case pt_slowgrav:
+			p->vel[2] -= grav;
+			break;
+		}
+	}
+}
+
+
+void CL_RunParticles (void)
+{
+	particle_type_t	*pt, *kill;
+
+	if (!active_particle_types) return;
+	if (cls.state != ca_connected) return;
+
+	// remove from the head of the list
+	for (;;)
+	{
+		kill = active_particle_types;
+
+		if (kill && !kill->particles)
+		{
+			// return to the free list
+			active_particle_types = kill->next;
+			kill->next = free_particle_types;
+			kill->numparticles = 0;
+			free_particle_types = kill;
+
+			continue;
+		}
+
+		break;
+	}
+
+	// no types currently active
+	if (!active_particle_types) return;
+
+	for (pt = active_particle_types; pt; pt = pt->next)
+	{
+		// remove from a mid-point in the list
+		for (;;)
+		{
+			kill = pt->next;
+
+			if (kill && !kill->particles)
+			{
+				pt->next = kill->next;
+				kill->next = free_particle_types;
+				kill->numparticles = 0;
+				free_particle_types = kill;
+
+				continue;
+			}
+
+			break;
+		}
+
+		CL_RunParticlesForType (pt);
+	}
+}
+
+
+/*
+===============
+R_DrawParticles -- johnfitz -- moved all non-drawing code to CL_RunParticles
+===============
+
+
+int r_particleframe = -1;
+
+typedef struct r_particlevert_s
+{
+	float xyz[3];
+
+	union
+	{
+		byte color[4];
+		unsigned int rgba;
+	};
+
+	float st[2];
+} r_particlevert_t;
+
+r_particlevert_t *r_particleverts;
+int r_numparticleverts;
+int r_maxparticleverts = SCRATCHBUF_SIZE / (sizeof (r_particlevert_t) * 4);
+
+void R_ParticlesBegin (void)
+{
+#define PARTICLE_SCALE	(0.666f * r_particlesize.value)
+#define HACK_SCALE_UP	(0.004f * r_particlescale.value)
+
+	GL_SetVertexProgram (arb_particle_vp);
+
+	if (Fog_GetDensity () > 0)
+		GL_SetFragmentProgram (arb_particle_fp_fog);
+	else GL_SetFragmentProgram (arb_particle_fp);
+
+	qglProgramLocalParameter4fARB (GL_VERTEX_PROGRAM_ARB, 0, vup[0] * PARTICLE_SCALE, vup[1] * PARTICLE_SCALE, vup[2] * PARTICLE_SCALE, 0);
+	qglProgramLocalParameter4fARB (GL_VERTEX_PROGRAM_ARB, 1, vright[0] * PARTICLE_SCALE, vright[1] * PARTICLE_SCALE, vright[2] * PARTICLE_SCALE, 0);
+	qglProgramLocalParameter4fARB (GL_VERTEX_PROGRAM_ARB, 2, -(r_origin[0] * vpn[0]), -(r_origin[1] * vpn[1]), -(r_origin[2] * vpn[2]), 0);
+	qglProgramLocalParameter4fARB (GL_VERTEX_PROGRAM_ARB, 3, vpn[0], vpn[1], vpn[2], 0);
+
+	// hack a scale up to prevent particles from disappearing
+	qglProgramLocalParameter4fARB (GL_VERTEX_PROGRAM_ARB, 4, HACK_SCALE_UP, HACK_SCALE_UP, HACK_SCALE_UP, 1.0f);
+
+	// boost alpha to make particles look nicer
+	qglProgramLocalParameter4fARB (GL_FRAGMENT_PROGRAM_ARB, 0, 1, 1, 1, 1.5f);
+
+	r_particleverts = (r_particlevert_t *) scratchbuf;
+	r_numparticleverts = 0;
+
+	// ... and this is our real deal ...
+	GL_EnableVertexArrays (VAA_0 | VAA_1 | VAA_2);
+	GL_VertexArrayPointer (0, 0, 3, GL_FLOAT, GL_FALSE, sizeof (r_particlevert_t), r_particleverts->xyz);
+	GL_VertexArrayPointer (0, 1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof (r_particlevert_t), r_particleverts->color);
+	GL_VertexArrayPointer (0, 2, 2, GL_FLOAT, GL_FALSE, sizeof (r_particlevert_t), r_particleverts->st);
+}
+
+
+void R_ParticlesEnd (void)
+{
+	// draw anything left over
+	if (r_numparticleverts)
+	{
+		GL_DrawArrays (GL_QUADS, 0, r_numparticleverts);
+		r_numparticleverts = 0;
+	}
+}
+
+
+#define R_ParticleVertex(vert, s, t) \
+	(vert).xyz[0] = p->org[0]; \
+	(vert).xyz[1] = p->org[1]; \
+	(vert).xyz[2] = p->org[2]; \
+	(vert).rgba = d_8to24table_rgba[(int) p->color]; \
+	(vert).st[0] = (s); \
+	(vert).st[1] = (t);
+
+void R_DrawParticlesForType (particle_type_t *pt)
+{
+	particle_t *p;
+
+	for (p = pt->particles; p; p = p->next)
+	{
+		// don't crash (255 is alpha)
+		if (p->color < 0 || p->color > 254) continue;
+		if (p->alpha < 0) continue;
+
+		if (r_numparticleverts >= r_maxparticleverts)
+		{
+			GL_DrawArrays (GL_QUADS, 0, r_numparticleverts);
+			r_particleverts = (r_particlevert_t *) scratchbuf;
+			r_numparticleverts = 0;
+		}
+
+		R_ParticleVertex (r_particleverts[0], -1, -1);
+		R_ParticleVertex (r_particleverts[1], 1, -1);
+		R_ParticleVertex (r_particleverts[2], 1, 1);
+		R_ParticleVertex (r_particleverts[3], -1, 1);
+
+		r_particleverts += 4;
+		r_numparticleverts += 4;
+	}
+}
+
+
+void R_AddParticlesToAlphaList (particle_type_t *pt);
+
+void R_DrawParticles (void)
+{
+	particle_type_t *pt;
+	extern	cvar_t	r_particles; // johnfitz
+
+	if (!r_particles.value) return;
+	if (!active_particle_types) return;
+
+	for (pt = active_particle_types; pt; pt = pt->next)
+	{
+		if (!pt->particles) continue;
+
+		R_AddParticlesToAlphaList (pt);
+	}
+}
+
+
+void CL_WipeParticles (void)
+{
+	// these need to be wiped immediately on going to a new server
+	active_particle_types = NULL;
+	free_particle_types = NULL;
+	free_particles = NULL;
+}
+*/
+#endif
 
 /*
 ===============
@@ -908,7 +1271,7 @@ void Classic_DrawParticles (void)
 	time1 = frametime * 5;
 	grav = frametime * sv_gravity.value * 0.05;
 	dvel = 4 * frametime;
-	
+
 	for ( ; ; ) 
 	{
 		kill = active_particles;
@@ -936,24 +1299,16 @@ void Classic_DrawParticles (void)
 			}
 			break;
 		}
-
 #ifdef GLQUAKE
 		// hack a scale up to keep particles from disapearing
-		if (r_particle_scale.value)//R00k: cvar'd this
+		if (r_particle_scale.value <= 1)//R00k: cvar'd this
 		{
 			dist = (p->org[0] - r_origin[0])*vpn[0] + (p->org[1] - r_origin[1])*vpn[1] + (p->org[2] - r_origin[2])*vpn[2];
 			scale = 1 + dist * r_partscale;
 		}
 		else
 		{
-			if (r_particle_scale.value > 1)//R00k: cvar'd this
-			{
-				scale = r_particle_scale.value;
-			}
-			else
-			{
-				scale = 1;
-			}
+			scale = CLAMP(2, r_particle_scale.value, 6);
 		}
 
 		at = (byte *)&d_8to24table[(int)p->color];
